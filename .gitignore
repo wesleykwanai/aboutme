@@ -1,0 +1,4 @@
+# local dev helpers — not part of the live site
+.pi/
+*.py
+*.txt
