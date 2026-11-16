@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-HK">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>繪本島結構版 — island.html</title>
+<style>
+*{box-sizing:border-box;margin:0}body{font-family:"Noto Sans HK",sans-serif;background:#0b1622;color:#fff;overflow:hidden}
+#left{position:fixed;left:12px;top:12px;bottom:12px;width:250px;background:#101d2e;border:1px solid #22344d;border-radius:12px;padding:12px;z-index:5;overflow:auto}
+#left h2{font-size:15px;color:#f2c96b}#left .sub{font-size:12px;color:#8fa3bd;margin:2px 0 10px}
+.cat{background:#16273d;border:1px solid #2a3f5c;border-radius:8px;padding:8px;margin:8px 0;font-size:13px}
+.cat b{color:#ffd97a}.cat .row{margin-top:6px;display:flex;gap:6px}
+button{background:#1d3350;color:#fff;border:1px solid #35507a;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer}
+button.go{background:#B5822A;border-color:#B5822A}
+#right{position:fixed;right:12px;top:12px;bottom:12px;width:300px;background:#101d2e;border:1px solid #22344d;border-radius:12px;padding:12px;z-index:5;display:none;overflow:auto}
+#right h3{font-size:14px;color:#ffd97a}#right pre{white-space:pre-wrap;font-size:13px;background:#0b1622;padding:8px;border-radius:8px;margin-top:8px}
+#hint{position:fixed;left:274px;bottom:12px;font-size:12px;color:#8fa3bd;z-index:5}
+#walk{position:fixed;left:274px;top:12px;z-index:5;display:flex;gap:6px}
+#walk button.on{background:#B5822A;border-color:#B5822A}
+#joy{position:fixed;right:330px;bottom:20px;width:110px;height:110px;z-index:5;display:none}
+#c{touch-action:none}
+#collapseL,#collapseR{position:fixed;top:12px;z-index:6;display:none;background:#1d3350;color:#fff;border:1px solid #35507a;border-radius:8px;padding:8px 10px;font-size:14px}
+#collapseL{left:12px}#collapseR{right:12px}
+@media(max-width:900px){
+ #left{width:210px}#right{width:260px}#hint{left:12px;bottom:8px;font-size:11px;right:12px}
+ #collapseL,#collapseR{display:block}
+ #left.hidden{transform:translateX(-115%)}#right.hidden{transform:translateX(115%)}
+ #left,#right{transition:transform .25s}}
+#3d{position:fixed;inset:0}#c{width:100%;height:100%;display:block}
+.tag{display:inline-block;border:1px solid #B5822A;color:#f2c96b;border-radius:12px;padding:0 8px;font-size:11px;margin:2px}
+</style>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="left"><h2>📚 繪本島（結構版）</h2><div class="sub" id="count">載入中…</div><div style="margin:8px 0"><input id="q" placeholder="搜書名／tag／內文…" style="width:100%;padding:6px"></div><div id="sres" style="display:none"></div><details id="histBox" open><summary style="cursor:pointer;font-size:13px">📖 閱讀足跡</summary><div id="hist"></div></details><div id="cats"></div>
+<div class="sub">之後有書：改 notes.json 就自動變書。無書都照行。</div></div>
+<div id="walk"><button id="bWalk" class="on">🚶 行走</button><button id="bFly">🦅 自由瀏覽</button></div><button id="collapseL">☰</button><button id="collapseR">📖</button>
+<div id="right"><div style="text-align:right"><button onclick="R.style.display='none'">X</button></div><h3 id="rt"></h3><div id="rm"></div><pre id="rb" style="white-space:pre-wrap;max-height:38vh;overflow:auto;font-size:13px"></pre></div>
+<div id="hint">全島總覽 · 點地面派貓村民過去 · 拖曳轉視角 · 兩指縮放 · 撳書櫃開目錄</div>
+<div id="err" style="position:fixed;top:50px;left:280px;z-index:99;color:#f66;font-size:13px;max-width:500px"></div><canvas id="c"></canvas><script>addEventListener('error',e=>{document.getElementById('err').textContent='ERR: '+(e.message||e.error)});</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+const R=document.getElementById('right');
+// 5 島定義：之後改名就得，結構唔使郁
+const PALETTE=[0x7ddb7d,0x9fd48f,0x6fce8f,0x8fd49f,0x7ddb9a,0x86c98f,0x95d6a0,0x6fc489,0x7fd6b5,0xa8dba8];
+function loadIslandNames(){const DEF=[['\u4E2D\u592E\u7E3D\u9928','Grand Library HQ'],['\u5317\u7FFC','North'],['\u6771\u7FFC','East'],['\u5357\u7FFC','South'],['\u897F\u7FFC','West']];try{const s=JSON.parse(localStorage.getItem('island_islands')||'[]');if(s.length>=1&&s.every(o=>o.c!==undefined))return s.map((o,i)=>({id:o.id||('isl'+i+'_'+Date.now()),c:o.c,e:o.e||'',col:o.col||PALETTE[i%PALETTE.length],parent:o.parent||null}));}catch(e){}return DEF.map((d,i)=>({id:'isl'+i,c:d[0],e:d[1],col:PALETTE[i%PALETTE.length],parent:null}));}
+function layoutIslands(names){const tops=names.filter(N=>!N.parent);const out=tops.map((N,i)=>{if(i===0)return{id:N.id,c:N.c,e:N.e,col:N.col,x:0,z:0};const a=-Math.PI/2+(i-1)/(tops.length-1)*Math.PI*2;return{id:N.id,c:N.c,e:N.e,col:N.col,x:Math.round(Math.cos(a)*20),z:Math.round(Math.sin(a)*20)};});const byP={};names.filter(N=>N.parent).forEach(N=>{(byP[N.parent]=byP[N.parent]||[]).push(N);});Object.keys(byP).forEach(pid=>{const P=out.find(o=>o.id===pid);const ks=byP[pid];if(!P){ks.forEach((N,i)=>{const a=-Math.PI/2+i/Math.max(1,ks.length)*Math.PI*2;out.push({id:N.id,c:N.c,e:N.e,col:N.col||0x9fd48f,x:Math.round(Math.cos(a)*20),z:Math.round(Math.sin(a)*20)});});return;}ks.forEach((N,k)=>{const a=k/Math.max(1,ks.length)*Math.PI*2;out.push({id:N.id,c:N.c,e:N.e,col:N.col||PALETTE[out.length%PALETTE.length],parent:pid,small:true,x:P.x+Math.round(Math.cos(a)*13),z:P.z+Math.round(Math.sin(a)*13)});});});return out;}
+const ISLANDS_DEF=[
+ {id:'center',c:'中央總館',e:'Grand Library HQ',x:0,z:0,col:0x7ddb7d},
+ {id:'north',c:'北翼 AI 與技能長廊',e:'AI & Skills',x:0,z:-20,col:0x9fd48f},
+ {id:'east',c:'東翼 P3-4',e:'Engineering',x:20,z:0,col:0x6fce8f},
+ {id:'south',c:'南翼 P5-6',e:'Media Oasis',x:0,z:20,col:0x8fd49f},
+ {id:'west',c:'西翼 視覺藝術',e:'Visual Arts',x:-20,z:0,col:0x7ddb9a}];let ISLANDS=layoutIslands(loadIslandNames());
+const SPOKES=[];ISLANDS.forEach((I,i)=>{if(I.parent){const P=ISLANDS.find(o=>o.id===I.parent);if(P)SPOKES.push([P.x,P.z,I.x,I.z]);}else if(i>0)SPOKES.push([0,0,I.x,I.z]);});
+const EXT=Math.max(20,...ISLANDS.map(I=>Math.max(Math.abs(I.x),Math.abs(I.z))))+10;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x8ecfee);scene.fog=new THREE.Fog(0x8ecfee,EXT*2,EXT*5);
+const cam=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,500);cam.position.set(0,EXT*1.5,EXT*1.9);
+const ren=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});ren.setSize(innerWidth,innerHeight);
+const ctl=new OrbitControls(cam,ren.domElement);ctl.maxPolarAngle=1.35;ctl.minDistance=6;ctl.maxDistance=EXT*2.5;ctl.target.set(0,1,0);
+// 海
+const sea=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshLambertMaterial({color:0x2f9fd8}));sea.rotation.x=-Math.PI/2;sea.position.y=-1.6;scene.add(sea);
+scene.add(new THREE.HemisphereLight(0xffffff,0x3a6a9a,1.1));const sun=new THREE.DirectionalLight(0xffffff,.9);sun.position.set(20,30,10);scene.add(sun);
+function label(text,sub,w,h){const cv=document.createElement('canvas');cv.width=512;cv.height=128;const g=cv.getContext('2d');
+g.fillStyle='rgba(16,30,48,.92)';g.beginPath();if(g.roundRect)g.roundRect(6,6,500,116,24);else g.rect(6,6,500,116);g.fill();g.strokeStyle='#f2c96b';g.stroke();
+g.fillStyle='#fff';g.font='bold 40px sans-serif';g.textAlign='center';g.fillText(text,256,58);g.fillStyle='#9fb6cf';g.font='28px sans-serif';g.fillText(sub||'',256,96);
+const t=new THREE.CanvasTexture(cv);const m=new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false});const s=new THREE.Sprite(m);s.scale.set(w||8,h||2,1);s.renderOrder=10;return s;}
+function tree(x,y,z,c){const g=new THREE.Group();const t=new THREE.Mesh(new THREE.ConeGeometry(1,2.4,6),new THREE.MeshLambertMaterial({color:c||0x2e8b57}));t.position.y=1.8;const s=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,.8),new THREE.MeshLambertMaterial({color:0x8a5a2b}));s.position.y=.4;g.add(t,s);g.position.set(x,y,z);return g;}
+const pickables=[];const decorReg={};
+function shelf(parent,title,n,x,z,fk){const g=new THREE.Group();g.position.set(x,0,z);
+ const books=Array.isArray(n)?n:[];const nb=books.length;
+ const frame=new THREE.Mesh(new THREE.BoxGeometry(4.4,3.4,.6),new THREE.MeshLambertMaterial({color:0x6b4226}));frame.position.y=1.7;g.add(frame);
+ // 書：n 本，無書就留空＋黃牌
+ const hues=books.flatMap((b,bi)=>{const c=Math.max(1,((b.pics||[]).length||(b.pic?1:0)));return Array.from({length:Math.min(c,6)},()=>((bi*.37)%1));});
+ let total=books.reduce((s,b)=>s+Math.max(1,((b.pics||[]).length||(b.pic?1:0))),0);if(!books.length)total=4;total=Math.min(total,24);
+ for(let i=0;i<total;i++){const row=i<12?0:1,k=row?i-12:i,h=.9+((i*37)%10)*.06;
+  const b=new THREE.Mesh(new THREE.BoxGeometry(.3,h,.45),new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(hues.length?hues[i%hues.length]:(i*.23)%1,.65,.55)}));
+  b.position.set(-1.7+k*.32,1+h/2+row*1.2,0);g.add(b);}
+ for(let lvl=0;lvl<2;lvl++){const p=new THREE.Mesh(new THREE.BoxGeometry(4,.12,.6),new THREE.MeshLambertMaterial({color:0x4a2d18}));p.position.y=1+lvl*1.2;g.add(p);}
+ const lb=label(title,(nb?nb+' \u518A':'\u7A7A\u6AC3 \u00B7 \u5F85\u4E0A\u67B6'),4,1);lb.position.y=3.4;g.add(lb);
+ frame.userData={title,n:nb,folder:fk,gr:g};frame.userData.isShelf=true;pickables.push(frame);parent.add(g);shelfObjs.push(g);return g;}
+// 起島
+const groups={};
+ISLANDS.forEach(I=>{const g=new THREE.Group();g.position.set(I.x,0,I.z);
+ const base=new THREE.Mesh(new THREE.CylinderGeometry(I.small?5.5:9,I.small?4.2:7,2.4,6),new THREE.MeshLambertMaterial({color:0xb0713e}));base.position.y=-1;g.add(base);
+ const top=new THREE.Mesh(new THREE.CylinderGeometry(I.small?5:8.4,I.small?5:8.4,.7,6),new THREE.MeshLambertMaterial({color:0x77d977}));top.position.y=.35;g.add(top);
+ const lb=label(I.c,I.e,I.small?4.5:7,I.small?1.2:1.75);lb.position.y=I.small?4:5.5;g.add(lb);
+ buildDecor(g,I);
+ // 中央噴水池，其餘小橋墩點綴
+ 
+ scene.add(g);groups[I.id]=g;});
+// 橋連中央↔四翼
+const spokeMeshes=[];SPOKES.forEach(([x1,z1,x2,z2])=>{const len=Math.hypot(x2-x1,z2-z1)-4;const b=new THREE.Mesh(new THREE.BoxGeometry(3.2,.4,len),new THREE.MeshLambertMaterial({color:0x9a4a2b}));b.position.set((x1+x2)/2,-.2,(z1+z2)/2);b.rotation.y=Math.atan2(x2-x1,z2-z1);scene.add(b);spokeMeshes.push(b);});
+// 讀 notes.json（無書都照行）
+let NOTES=[{id:'P4-1',title:'\u793a\u4f8b:P4 \u4e58\u6cd5',folder:'\u6771 P3-4',tags:['\u6578\u5b78'],excerpt:'\u4f54\u4f4d'}];
+function migrate(){NOTES.forEach(n=>{if(!Array.isArray(n.pics))n.pics=n.pic?[n.pic]:[];});}
+function saveAll(){try{localStorage.setItem('island_notes',JSON.stringify(NOTES));}catch(e){}}
+(function(){try{const s=JSON.parse(localStorage.getItem('island_notes')||'[]');if(s.length)NOTES=s;}catch(e){}migrate();})();
+fetch('./notes.json').then(r=>r.json()).then(j=>{if(Array.isArray(j)&&j.length&&!localStorage.getItem('island_notes')){NOTES=j;migrate();buildShelves();}}).catch(()=>{});
+// folder → 島：暫時全部書櫃放返自己島，一個 folder 一個櫃
+const shelfStand={};const shelfObjs=[];var islShelfCount={};var curFolder='';let EDIT=false;const DEF_PW='853a93b0bbde583003294effedf1d728c0aff8dda267b2272021455c8821f080';var _pic=null;var _pics=[];
+function renderPics(){const box=document.getElementById('ePics');if(!box)return;box.innerHTML=_pics.map((s,i)=>'<div style=\u0022position:relative\u0022><img src=\u0022'+s+'\u0022 style=\u0022width:64px;height:64px;object-fit:cover;border-radius:6px\u0022><button data-px=\u0022'+i+'\u0022 style=\u0022position:absolute;top:-6px;right:-6px;width:20px;height:20px;font-size:11px;padding:0\u0022>\u00D7</button></div>').join('');box.querySelectorAll('[data-px]').forEach(el=>el.onclick=()=>{_pics.splice(+el.getAttribute('data-px'),1);renderPics();});}
+const catsEl=document.getElementById('cats');
+setupDesign();buildShelves();buildExportBtn();
+function defDecor(sc){sc=sc||1;return [{k:'t',x:-5*sc,z:3*sc},{k:'t',x:5*sc,z:-3*sc},{k:'t',x:4*sc,z:4*sc,c:0xf2a7c3},{k:'f',x:0,z:0}];}
+function buildDecor(g,I){let saved=null;try{saved=(JSON.parse(localStorage.getItem('island_decor')||'{}'))[I.id];}catch(e){}const def=defDecor(I.small?.55:1);const list=(Array.isArray(saved)&&saved.length?saved:def);const reg=decorReg[I.id]=[];list.forEach((d,di)=>{const dd=Object.assign({},def[di]||{},d);let o;if(dd.k==='f'){o=new THREE.Mesh(new THREE.CylinderGeometry(1,1.2,.5,6),new THREE.MeshLambertMaterial({color:0xbfe9ff}));o.position.set(dd.x,.9,dd.z);}else{o=tree(dd.x,.7,dd.z,dd.c);}const tag={isDecor:true,ref:o,isl:I.id,di};if(o.isMesh){o.userData=tag;pickables.push(o);}else{o.children.forEach(ch=>{ch.userData=tag;pickables.push(ch);});}g.add(o);reg.push({k:dd.k,c:dd.c,o});});}
+function saveDecor(){const dm={};for(const k in decorReg)dm[k]=decorReg[k].map(e=>({k:e.k,x:+e.o.position.x.toFixed(2),z:+e.o.position.z.toFixed(2),c:e.c}));try{localStorage.setItem('island_decor',JSON.stringify(dm));}catch(e){}}
+const shelfMap={};
+let DESIGN=false,dragSt=null;const dragPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-0.7);
+function setupDesign(){if(!EDIT)return;const b=document.createElement('button');b.id='designBtn';b.style.cssText='position:fixed;right:12px;bottom:12px;z-index:60;padding:8px 12px;border-radius:10px;';b.textContent='🏗 設計模式：關';b.onclick=()=>{DESIGN=!DESIGN;b.textContent='🏗 設計模式：'+(DESIGN?'開':'關');ren.domElement.style.cursor=DESIGN?'move':'';};document.body.appendChild(b);
+window.addEventListener('pointerup',()=>{if(dragSt)endDrag();});
+ren.domElement.addEventListener('pointermove',e=>{if(!dragSt)return;const r=ren.domElement.getBoundingClientRect();mou.x=((e.clientX-r.left)/r.width)*2-1;mou.y=-((e.clientY-r.top)/r.height)*2+1;ray.setFromCamera(mou,cam);const pt=new THREE.Vector3();if(!ray.ray.intersectPlane(dragPlane,pt))return;let lx=pt.x-dragSt.isl.x,lz=pt.z-dragSt.isl.z;const d=Math.hypot(lx,lz);const lim=dragSt.isl.small?3.2:6.5;if(d>lim){lx*=lim/d;lz*=lim/d;}dragSt.g.position.x=lx;dragSt.g.position.z=lz;dragSt.moved=true;});}
+function tryStartDrag(e){const r=ren.domElement.getBoundingClientRect();mou.x=((e.clientX-r.left)/r.width)*2-1;mou.y=-((e.clientY-r.top)/r.height)*2+1;ray.setFromCamera(mou,cam);const h=ray.intersectObjects(pickables,false);if(!h.length)return;const u=h[0].object.userData;if(!u)return;if(u.isDecor&&u.ref){const isl2=ISLANDS.find(I=>I.id===u.isl);if(!isl2)return;dragSt={g:u.ref,isl:isl2,decor:u.di,moved:false};ctl.enabled=false;return;}if(!u.isShelf||!u.folder||!u.gr)return;const id=((shelfMap[u.folder]||{}).i)||shelfMap[u.folder];const isl=ISLANDS.find(I=>I.id===id);if(!isl)return;dragSt={g:u.gr,isl,folder:u.folder,moved:false};ctl.enabled=false;}
+function endDrag(){const d=dragSt;dragSt=null;ctl.enabled=true;if(!d||!d.moved)return;const x=+d.g.position.x.toFixed(2),z=+d.g.position.z.toFixed(2);if(d.decor!==undefined){saveDecor();return;}shelfMap[d.folder]={i:d.isl.id,x,z};shelfStand[d.folder]=[d.isl.x+x,d.isl.z+z+2.2];try{localStorage.setItem('island_shelfmap',JSON.stringify(shelfMap));}catch(e){}}
+function buildShelves(){
+shelfObjs.forEach(o=>o.parent&&o.parent.remove(o));shelfObjs.length=0;for(let pi=pickables.length-1;pi>=0;pi--){if(!pickables[pi].userData||!pickables[pi].userData.isDecor)pickables.splice(pi,1);}for(const k in shelfStand)delete shelfStand[k];catsEl.innerHTML='';
+const byF={};NOTES.forEach(n=>{(byF[n.folder]=byF[n.folder]||[]).push(n);});
+const folders=Object.keys(byF).length?Object.keys(byF):['中央總館','北翼 AI 與技能長廊','東 P3-4','南 P5-6','西翼 視覺藝術'];
+document.getElementById('count').textContent=NOTES.length?NOTES.length+' 筆 · '+folders.length+' 櫃':'結構版 · 暫無書（'+folders.length+' 個空櫃）';
+try{Object.assign(shelfMap,JSON.parse(localStorage.getItem('island_shelfmap')||'{}'));}catch(e){}
+const islLoad={};ISLANDS.forEach(I=>islLoad[I.id]=0);
+folders.forEach((f,i)=>{const arr=byF[f]||[];let m=shelfMap[f];let isl=ISLANDS.find(I=>I.id===(m&&m.i||m));
+ if(!isl){isl=ISLANDS.slice().sort((a,b)=>(islLoad[a.id]||0)-(islLoad[b.id]||0))[0];shelfMap[f]=isl.id;}
+ islLoad[isl.id]=(islLoad[isl.id]||0)+1;const g=groups[isl.id];
+ const SP=isl.small?[[-1.5,-2],[1.5,-2],[-1.5,-4],[1.5,-4],[0,-2.8],[0,-.8]]:[[-2,-3],[2,-3],[-2,-6.5],[2,-6.5],[0,-4.5],[0,-1]];const sp=SP[(islLoad[isl.id]-1)%SP.length];let shx=sp[0],shz=sp[1];if(m&&typeof m==='object'&&m.x!==undefined){shx=m.x;shz=m.z;}
+ shelf(g,f+(arr.length?'':'\uFF08\u7A7A\uFF09'),arr,shx,shz,f);
+ shelfStand[f]=[isl.x+shx,isl.z+shz+2.2];
+ const d=document.createElement('div');d.className='cat';
+ d.innerHTML='<b style="cursor:pointer;text-decoration:underline" title="撳我派貓村民行過去">'+f+'</b> · '+arr.length+' 冊<br><span style="color:#8fa3bd">'+isl.c+'</span><div class="row"><button class="go">帶路</button><button>開啟書櫃</button></div>';
+ d.querySelector('b').onclick=()=>go.click();
+ const[go,open]=d.querySelectorAll('button');
+ go.onclick=()=>{ctl.target.set(isl.x,1,isl.z);cam.position.set(isl.x,14,isl.z+16);
+  const st=shelfStand[f];if(st){let fx=st[0],fz=st[1];
+   if(!walkable(fx,fz)){const nx=nearestLand(fx,fz);if(nx){fx=nx[0];fz=nx[1];}else return;}
+   dest=new THREE.Vector3(fx,.7,fz);route=buildRoute(P.position.x,P.position.z,fx,fz);}};
+ open.onclick=()=>showShelf(f,arr);
+ catsEl.appendChild(d);});try{localStorage.setItem('island_shelfmap',JSON.stringify(shelfMap));}catch(e){}islShelfCount=Object.assign({},islLoad);renderHist();}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+var curPage=0,curTag='';
+function showShelf(title,arr,page,tag){R.style.display='block';document.getElementById('rt').textContent=title;
+curFolder=title.replace(/\uFF08\u7A7A\uFF09/g,'');curPage=page||0;const READ=readIds();curTag=tag||'';
+const full=NOTES.filter(x=>x.folder===curFolder);
+const agg={};full.forEach(n=>(n.tags||[]).forEach(tg=>agg[tg]=(agg[tg]||0)+1));
+const pills='<button data-t=""'+(curTag?'':' disabled')+'>\u5168\u90E8('+full.length+')</button>'+Object.keys(agg).map(tg=>'<button data-t="'+esc(tg)+'"'+(curTag===tg?' disabled':'')+'>#'+esc(tg)+'('+agg[tg]+')</button>').join('');
+const list=curTag?full.filter(n=>(n.tags||[]).includes(curTag)):full;
+const PER=10,pages=Math.max(1,Math.ceil(list.length/PER));curPage=Math.min(curPage,pages-1);
+const rows=list.slice(curPage*PER,curPage*PER+PER);
+document.getElementById('rm').innerHTML='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">'+pills+'</div>'+(rows.length?rows.map(n=>'<div data-id="'+n.id+'" class="bk" style="margin:6px 0;font-size:13px;cursor:pointer">\uD83D\uDCD6 '+(READ.has(n.id)?'✓ ':'')+((n.pics&&n.pics[0])?'<img src="'+n.pics[0]+'" style="width:28px;height:28px;object-fit:cover;border-radius:4px;vertical-align:middle"> ':'')+esc(n.title)+' <span style="color:#8fa3bd;font-size:11px">'+(n.body||n.excerpt||'').length+'\u5B57</span><div style="font-size:12px;color:#c9d4e2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+esc((n.excerpt||'').slice(0,80))+'</div>'+(EDIT?' <button data-ed="'+n.id+'">\u270F\uFE0F</button><button data-del="'+n.id+'">\uD83D\uDDD1</button>':'')+'</div>').join(''):'<div style="color:#8fa3bd;font-size:13px">\u7A7A\u6AC3\u3002</div>')+(pages>1?'<div style="margin-top:6px;font-size:12px"><button id="pPrev"'+(curPage===0?' disabled':'')+'>\u2190</button> '+(curPage+1)+'/'+pages+' <button id="pNext"'+(curPage>=pages-1?' disabled':'')+'>\u2192</button></div>':'')+(EDIT?'<div style="margin-top:8px;display:flex;gap:6px"><button id="bRen">\u6539\u6AC3\u540D</button><button id="bNew">\uFF0B \u65B0\u589E\u4E00\u66F8</button></div>':'<div style="font-size:11px;color:#8fa3bd;margin-top:8px">\u95B1\u8B80\u6A21\u5F0F\uFF1A\u8001\u5E2B\u7528 ?edit=1 \u958B\u7DE8\u8F2F</div>');
+document.getElementById('rb').textContent='';
+document.querySelectorAll('#rm [data-t]').forEach(el=>el.onclick=()=>showShelf(title,arr,0,el.getAttribute('data-t')));
+const pp=document.getElementById('pPrev'),pn=document.getElementById('pNext');
+if(pp)pp.onclick=()=>showShelf(title,arr,curPage-1,curTag);
+if(pn)pn.onclick=()=>showShelf(title,arr,curPage+1,curTag);
+document.querySelectorAll('#rm .bk').forEach(el=>el.onclick=e=>{if(e.target.hasAttribute('data-ed')||e.target.hasAttribute('data-del'))return;showBook(el.getAttribute('data-id'));});
+document.querySelectorAll('#rm [data-ed]').forEach(el=>el.onclick=()=>showEditor(el.getAttribute('data-ed')));
+document.querySelectorAll('#rm [data-del]').forEach(el=>el.onclick=()=>{const n=NOTES.find(x=>x.id===el.getAttribute('data-del'));if(n&&confirm('\u522A\u9664\u300C'+n.title+'\u300D\uFF1F')){NOTES=NOTES.filter(x=>x.id!==n.id);saveAll();buildShelves();showShelf(curFolder,NOTES.filter(x=>x.folder===curFolder));}});
+const brn=document.getElementById('bRen');if(brn)brn.onclick=()=>{const nn=prompt('\u6AC3\u65B0\u540D\uFF1A',curFolder);if(!nn||!nn.trim()||nn.trim()===curFolder)return;const nf=nn.trim();NOTES.forEach(n=>{if(n.folder===curFolder)n.folder=nf;});try{const sm=JSON.parse(localStorage.getItem('island_shelfmap')||'{}');if(sm[curFolder]){sm[nf]=sm[curFolder];delete sm[curFolder];localStorage.setItem('island_shelfmap',JSON.stringify(sm));}}catch(e){}saveAll();buildShelves();showShelf(nf,NOTES.filter(x=>x.folder===nf));};
+if(EDIT)document.getElementById('bNew').onclick=()=>showEditor(null);}
+function showBook(id){const n=NOTES.find(x=>x.id===id);if(!n)return;
+try{speechSynthesis.cancel();}catch(e){}
+R.style.display='block';document.getElementById('rt').textContent=n.title;logRead(id);
+const wc=(n.body||n.excerpt||'').length;
+document.getElementById('rm').innerHTML='<div style="font-size:11px;background:#0f2038;border:1px solid #35507a;border-radius:8px;padding:6px 8px;margin-bottom:6px">id: '+esc(n.id)+'<br>folder: '+esc(n.folder)+'<br>tags: '+esc((n.tags||[]).join(', '))+'<br>updated: '+esc(n.updated||'-')+' \u00B7 '+wc+'\u5B57</div><div style="margin:8px 0;display:flex;gap:6px;flex-wrap:wrap"><button id="bRead">\u25B6 \u6717\u8B80</button><button id="bStop">\u25A0 \u505C\u6B62</button>'+(EDIT?'<button id="bEdit">\u270F\uFE0F \u7DE8\u8F2F</button>':'')+'<button id="bMd">\u2B07 .md</button><button id="bBack">\u2190 \u8FD4\u56DE</button></div>';
+document.getElementById('rb').innerHTML='<div style="white-space:pre-wrap;font-size:13px">'+esc((n.excerpt||'')+(n.body?'\n\n'+n.body:''))+'</div>';
+{const gal=(Array.isArray(n.pics)&&n.pics.length?n.pics:(n.pic?[n.pic]:[]));if(gal.length){const cw=document.createElement('div');cw.innerHTML='<img id=\u0022gMain\u0022 src=\u0022'+gal[0]+'\u0022 style=\u0022width:100%;border-radius:8px;margin-top:8px\u0022>'+(gal.length>1?'<div style=\u0022display:flex;gap:4px;margin-top:4px;flex-wrap:wrap\u0022>'+gal.map((s,i)=>'<img data-gi=\u0022'+i+'\u0022 src=\u0022'+s+'\u0022 style=\u0022width:52px;height:52px;object-fit:cover;border-radius:6px;cursor:pointer;'+(i?'opacity:.7':'')+'\u0022>').join('')+'</div>':'');document.getElementById('rm').appendChild(cw);cw.querySelectorAll('[data-gi]').forEach(el=>el.onclick=()=>{document.getElementById('gMain').src=gal[+el.getAttribute('data-gi')];});}}
+if(EDIT)document.getElementById('bEdit').onclick=()=>showEditor(id);
+document.getElementById('bMd').onclick=()=>dl(n.id+'.md','---\ntitle: '+n.title+'\nfolder: '+n.folder+'\ntags: '+(n.tags||[]).join(', ')+'\nupdated: '+(n.updated||'')+'\npics: '+((n.pics||[]).length)+'\u5F35\n---\n\n'+(n.body||n.excerpt||''));
+if(n.link){const la=document.createElement('a');la.href=n.link;la.target='_blank';la.style.marginLeft='6px';la.innerHTML='<button>\u6559\u6750\u9023\u7D50</button>';document.getElementById('bBack').before(la);}
+document.getElementById('bBack').onclick=()=>showShelf(curFolder,NOTES.filter(x=>x.folder===curFolder));
+document.getElementById('bRead').onclick=()=>speak((n.title+'\u3002'+(n.excerpt||'')+'\u3002'+(n.body||'')).slice(0,2000));
+document.getElementById('bStop').onclick=()=>{try{speechSynthesis.cancel();}catch(e){}};}
+function speak(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.rate=.95;const vs=speechSynthesis.getVoices();const v=vs.find(v=>/xiaoxiao|mei-jia|yunjian|hongkong|hk-|yue|guangdong|cantonese/i.test(v.name+' '+v.lang))||vs.find(v=>/^zh/i.test(v.lang));if(v){u.voice=v;u.lang=v.lang;}else u.lang='zh-HK';speechSynthesis.speak(u);}catch(e){}}
+function showEditor(id){if(!EDIT)return;
+const n=id?NOTES.find(x=>x.id===id):{id:'B'+Date.now(),title:'',folder:curFolder||'',tags:[],excerpt:'',body:'',pic:'',updated:'',pics:[]};
+if(!n)return;_pics=(Array.isArray(n.pics)&&n.pics.length?n.pics.slice():(n.pic?[n.pic]:[]));renderPics();R.style.display='block';document.getElementById('rt').textContent=id?'\u7DE8\u8F2F\uFF1A'+n.title:'\u65B0\u589E\u4E00\u66F8';
+const folders0=[...new Set(NOTES.map(x=>x.folder))];
+document.getElementById('rm').innerHTML='<label style="font-size:12px">\u66F8\u540D<br><input id="eT" style="width:100%" value="'+esc(n.title)+'"></label><br><label style="font-size:12px">\u66F8\u6AC3\uFF08folder\uFF0C\u6253\u65B0\u540D\u5373\u65B0\u6AC3\uFF09<br><input id="eF" list="fdlist" style="width:100%" value="'+esc(n.folder)+'"><datalist id="fdlist">'+folders0.map(f=>'<option value="'+esc(f)+'">').join('')+'</datalist></label><br><label style="font-size:12px">tags\uFF08\u9017\u865F\u5206\u9694\uFF09<br><input id="eG" style="width:100%" value="'+esc((n.tags||[]).join(', '))+'"></label><br><label style="font-size:12px">\u5716\u7247<br><input id="eP" type="file" accept="image/*" multiple><div id="ePics" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px"></div><br><input id="ePu" style="width:100%;margin-top:4px" placeholder="\u6216\u8CBC\u5716\u7247\u9023\u7D50\uFF1Apics/xxx.jpg \u6216 https://..."></label><br><label style="font-size:12px">\u6458\u8981<label style="font-size:12px">\u6559\u6750\u9023\u7D50\uFF08PDF\uFF0FDrive\uFF09<br><input id="eL" style="width:100%" value="'+esc(n.link||'')+'"></label><br><label style="font-size:12px"> excerpt<br>\u66F4\u65B0\u65E5\u671F <input id="eU" type="date" value="'+esc(n.updated||'')+'"><br><textarea id="eX" rows="3" style="width:100%">'+esc(n.excerpt||'')+'</textarea></label><br><label style="font-size:12px">\u5168\u6587 body<br><textarea id="eB" rows="6" style="width:100%">'+esc(n.body||'')+'</textarea></label><div style="margin-top:8px;display:flex;gap:6px"><button id="bSave">\u5132\u5B58</button><button id="bCancel">\u53D6\u6D88</button></div>';
+document.getElementById('rb').textContent='';
+document.getElementById('eP').onchange=e=>{[...e.target.files].forEach(f=>{if(!f||!f.type.startsWith('image/'))return;const img=new Image();img.onload=()=>{const M=800,s=Math.min(1,M/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*s));c.height=Math.max(1,Math.round(img.height*s));c.getContext('2d').drawImage(img,0,0,c.width,c.height);_pics.push(c.toDataURL('image/jpeg',.72));renderPics();URL.revokeObjectURL(img.src);};img.src=URL.createObjectURL(f);});e.target.value='';};
+document.getElementById('bCancel').onclick=()=>{if(id)showBook(id);else showShelf(curFolder,NOTES.filter(x=>x.folder===curFolder));};
+document.getElementById('bSave').onclick=()=>{const v=k=>document.getElementById(k).value.trim();
+const title=v('eT');if(!title){alert('\u66F8\u540D\u4E0D\u80FD\u7A7A');return;}
+const rec={id:n.id,title,folder:v('eF')||'\u672A\u5206\u985E',tags:v('eG').split(/[,\uFF0C\u3001]+/).map(s=>s.trim()).filter(Boolean),excerpt:v('eX'),body:v('eB'),pic:(_pics[0]||v('ePu')||''),pics:(()=>{const eu=v('ePu');const ap=_pics.slice();if(eu&&!ap.includes(eu))ap.push(eu);return ap;})(),link:v('eL'),updated:v('eU')||new Date().toISOString().slice(0,10)};
+const i=NOTES.findIndex(x=>x.id===n.id);if(i>=0)NOTES[i]=rec;else NOTES.push(rec);
+saveAll();buildShelves();showBook(rec.id);};}
+function showIslands(){if(!EDIT)return;R.style.display='block';document.getElementById('rt').textContent='\u5CF6\u5DBC\u8A2D\u5B9A';
+document.getElementById('rm').innerHTML=(function(){const names0=loadIslandNames();const numOf=id=>{const o=names0.find(n=>n.id===id);if(!o||!o.parent)return (names0.filter(n=>!n.parent).findIndex(n=>n.id===id)+1);const sib=names0.filter(n=>n.parent===o.parent);return numOf(o.parent)+'.'+(sib.findIndex(n=>n.id===id)+1);};return innerHTML=names0.map((N,ni)=>{const nsh=islShelfCount[N.id]||0;return '<div style="font-size:12px;margin:4px 0'+(N.parent?';margin-left:18px':'')+'">島'+numOf(N.id)+(ni===0?'（中央）':'')+' · '+nsh+'櫃<br><input data-i="'+ni+'" data-k="c" style="width:34%" value="'+esc(N.c)+'"> <input data-i="'+ni+'" data-k="e" style="width:32%" value="'+esc(N.e)+'"> <button data-delisl="'+ni+'">−</button>'+(N.parent?'':' <button data-addkid="'+N.id+'">＋小島</button>')+'</div>';}).join('');})()+'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button id="bIslAdd">\uFF0B \u52A0\u5CF6</button><button id="bIslSave">\u5132\u5B58\u4E26\u91CD\u958B</button></div>';
+document.getElementById('rb').textContent='\u4E2D\u6A1E\u5CF6\u5514\u522A\u5F97\uFF1B\u522A\u5CF6\u5622\u6B04\u81EA\u52D5\u642C\u8FD4\u4E2D\u6A1E\uFF0C\u66F8\u4E00\u672C\u90FD\u5514\u6703\u5514\u898B\u3002';
+document.querySelectorAll('#rm [data-delisl]').forEach(el=>el.onclick=()=>{const i=+el.getAttribute('data-delisl');if(i===0){alert('\u4E2D\u6A1E\u5CF6\u5514\u522A\u5F97');return;}const names=loadIslandNames();if(names.length<=1)return;const gone=names[i];names.splice(i,1);names.forEach(n=>{if(n.parent===gone.id)n.parent=gone.parent||null;});try{localStorage.setItem('island_islands',JSON.stringify(names));const sm=JSON.parse(localStorage.getItem('island_shelfmap')||'{}');Object.keys(sm).forEach(f=>{if((sm[f]&&sm[f].i||sm[f])===gone.id)sm[f]=names[0].id;});localStorage.setItem('island_shelfmap',JSON.stringify(sm));}catch(e){}location.reload();});
+document.querySelectorAll('#rm [data-addkid]').forEach(el=>el.onclick=()=>{const pid=el.getAttribute('data-addkid');const names=loadIslandNames();if(names.length>=10){alert('最多10座，夠啦');return;}const c=prompt('小島名：','新小島');if(!c||!c.trim())return;names.push({id:'isl'+Date.now(),c:c.trim(),e:'',parent:pid,col:PALETTE[names.length%PALETTE.length]});try{localStorage.setItem('island_islands',JSON.stringify(names));}catch(e){}location.reload();});
+document.getElementById('bIslAdd').onclick=()=>{const names=loadIslandNames();if(names.length>=10){alert('\u6700\u591A10\u5EA7\uFF0C\u5920\u5566');return;}names.push({id:'isl'+Date.now(),c:'\u65B0\u5CF6',e:'New Island'});try{localStorage.setItem('island_islands',JSON.stringify(names));}catch(e){}location.reload();};
+document.getElementById('bIslSave').onclick=()=>{const names=loadIslandNames();document.querySelectorAll('#rm input[data-i]').forEach(el=>{const o=names[+el.getAttribute('data-i')],k=el.getAttribute('data-k');if(o)o[k]=el.value.trim()||o[k];});try{localStorage.setItem('island_islands',JSON.stringify(names));}catch(e){}location.reload();};}
+function dl(name,text){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/markdown'}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
+function readIds(){try{return new Set(JSON.parse(localStorage.getItem('island_hist')||'[]').map(h=>h.id));}catch(e){return new Set();}}
+function logRead(id){try{let h=JSON.parse(localStorage.getItem('island_hist')||'[]');h=h.filter(x=>x.id!==id);h.unshift({id,t:Date.now()});localStorage.setItem('island_hist',JSON.stringify(h.slice(0,50)));}catch(e){}renderHist();}
+function renderHist(){const box=document.getElementById('hist');if(!box)return;let h=[];try{h=JSON.parse(localStorage.getItem('island_hist')||'[]');}catch(e){}box.innerHTML=h.length?h.map(x=>{const n=NOTES.find(y=>y.id===x.id);return n?'<div data-id="'+n.id+'" style="font-size:12px;cursor:pointer;margin:3px 0">✓ '+esc(n.title)+' <span style="color:#8fa3bd">'+esc(n.folder)+'</span></div>':'';}).join(''):'<div style="font-size:12px;color:#8fa3bd">未讀過，撳入任何一本書開始</div>';box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>showBook(el.getAttribute('data-id')));}
+function doSearch(){const q=document.getElementById('q').value.trim().toLowerCase();const sr=document.getElementById('sres');const show=q.length>0;sr.style.display=show?'block':'none';document.getElementById('cats').style.display=show?'none':'block';const hb=document.getElementById('histBox');if(hb)hb.style.display=show?'none':'block';if(!show)return;const m=NOTES.filter(n=>(n.title+' '+(n.tags||[]).join(' ')+' '+(n.excerpt||'')+' '+(n.body||'')+' '+n.folder).toLowerCase().includes(q)).slice(0,30);sr.innerHTML=(m.length?m.map(n=>'<div style="font-size:13px;margin:6px 0"><a href="#" data-id="'+n.id+'">'+esc(n.title)+'</a> <span style="color:#8fa3bd;font-size:11px">'+esc(n.folder)+'</span> <button data-go="'+esc(n.folder)+'">帶路</button></div>').join(''):'<div style="font-size:13px;color:#8fa3bd">搵唔到，試第二個字</div>');sr.querySelectorAll('[data-id]').forEach(el=>el.onclick=e=>{e.preventDefault();showBook(el.getAttribute('data-id'));});sr.querySelectorAll('[data-go]').forEach(el=>el.onclick=()=>goWalk(el.getAttribute('data-go')));}
+function goWalk(f){const st=shelfStand[f];if(!st)return;let fx=st[0],fz=st[1];if(!walkable(fx,fz)){const nx=nearestLand(fx,fz);if(nx){fx=nx[0];fz=nx[1];}else return;}const isl=ISLANDS.find(o=>Math.hypot(o.x-fx,o.z-fz)<12);if(isl){ctl.target.set(isl.x,1,isl.z);cam.position.set(isl.x,14,isl.z+16);}dest=new THREE.Vector3(fx,.7,fz);route=buildRoute(P.position.x,P.position.z,fx,fz);}
+document.getElementById('q').addEventListener('input',doSearch);
+async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('island:'+s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+async function ensureEdit(){if(!new URLSearchParams(location.search).has('edit'))return false;if(sessionStorage.getItem('island_unlocked')==='1')return true;try{if(!crypto.subtle){alert('此瀏覽器唔支援密碼，換 Chrome／Safari');return false;}}catch(e){return false;}const pw=prompt('\u8001\u5E2B\u6A21\u5F0F\uFF1A\u8ACB\u8F38\u5165\u5BC6\u78BC\uFF1A');if(!pw)return false;let okh=DEF_PW;try{okh=localStorage.getItem('island_pw')||DEF_PW;}catch(e){}if(await sha(pw)===okh){try{sessionStorage.setItem('island_unlocked','1');}catch(e){}return true;}alert('\u5BC6\u78BC\u5514\u55CE\uFF0C\u5DF2\u8F49\u70BA\u95B1\u8B80\u6A21\u5F0F');return false;}
+function buildExportBtn(){if(!EDIT||document.getElementById('bExpJ'))return;
+const d=document.createElement('div');d.className='cat';
+d.innerHTML='<b>\u5099\u4EFD</b><div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button id="bExpJ">\u2B07 notes.json</button><button id="bIsl">\u5CF6\u5DBC\u8A2D\u5B9A</button><button id="bChPw">\u6539\u5BC6\u78BC</button><button id="bNewS">\uFF0B \u65B0\u66F8\u6AC3</button></div><div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><button id="bImp">\u532F\u5165 .md</button><input type="file" id="fImp" accept=".md,.txt,text/markdown" multiple style="display:none"></div><div style="font-size:11px;color:#8fa3bd;margin-top:4px">\u6539\u52D5\u5373\u5B58\u700F\u89BD\u5668\uFF1B\u63DB\u6A5F\u524D\u5148\u532F\u51FA\uFF0C\u518D\u8CBC\u8FD4\u5165 notes.json</div>';
+document.getElementById('left').appendChild(d);
+document.getElementById('bExpJ').onclick=()=>dl('notes.json',JSON.stringify(NOTES,null,1));
+document.getElementById('bNewS').onclick=()=>{const f=prompt('\u65B0\u66F8\u6AC3\u540D\uFF08= folder\uFF09\uFF1A');if(f){curFolder=f;showEditor(null);}}
+document.getElementById('bIsl').onclick=()=>showIslands();
+document.getElementById('bChPw').onclick=async()=>{const a=prompt('\u65B0\u5BC6\u78BC\uFF08\u81F3\u5C114\u4F4D\uFF09\uFF1A');if(!a||a.length<4){alert('\u592A\u77ED');return;}const b=prompt('\u518D\u6253\u4E00\u6B21\u78BA\u8A8D\uFF1A');if(a!==b){alert('\u5169\u6B21\u5514\u540C');return;}try{localStorage.setItem('island_pw',await sha(a));alert('\u5BC6\u78BC\u5DF2\u6539\uFF0C\u5514\u597D\u5514\u8A18\u5F97\uFF01');}catch(e){alert('\u5B58\u5514\u5230');}};
+document.getElementById('bImp').onclick=()=>document.getElementById('fImp').click();
+document.getElementById('fImp').onchange=e=>{[...e.target.files].forEach(f=>{const r=new FileReader();r.onload=()=>{const tx=String(r.result||'');const m=tx.match(/^#\s+(.+)$/m);NOTES.push({id:'B'+Date.now()+Math.floor(Math.random()*999),title:m?m[1].trim():f.name.replace(/\.[^.]+$/,''),folder:curFolder||'\u672A\u5206\u985E',tags:[],excerpt:tx.slice(0,120),body:tx,updated:new Date(f.lastModified||Date.now()).toISOString().slice(0,10)});saveAll();buildShelves();};r.readAsText(f);});e.target.value='';};}
+// 撳 3D 書櫃
+const ray=new THREE.Raycaster(),mou=new THREE.Vector2();
+function pick(e){const r=ren.domElement.getBoundingClientRect();
+ const cx=(e.clientX??(e.touches&&e.touches[0].clientX))??0,cy=(e.clientY??(e.touches&&e.touches[0].clientY))??0;
+ mou.x=((cx-r.left)/r.width)*2-1;mou.y=-((cy-r.top)/r.height)*2+1;ray.setFromCamera(mou,cam);
+ const hitS=ray.intersectObjects(pickables,false)[0];
+ if(hitS){const title=hitS.object.userData.title;if(title){
+  const arr=NOTES.filter(n=>n.folder===title.replace(/（空）/g,''));showShelf(title,arr.length?arr:[]);return;}}
+ let hx=null,hz=null;
+ const hitG=ray.intersectObjects(ground,false)[0];
+ if(hitG){hx=hitG.point.x;hz=hitG.point.z;}
+ else{const pl=new THREE.Plane(new THREE.Vector3(0,1,0),-.7);const pt=new THREE.Vector3();
+  if(ray.ray.intersectPlane(pl,pt)){hx=pt.x;hz=pt.z;}}
+ if(hx===null)return;
+ hx=Math.max(-30,Math.min(30,hx));hz=Math.max(-30,Math.min(30,hz));
+ let fx=hx,fz=hz;
+ if(!walkable(fx,fz)){const nx=nearestLand(fx,fz);if(nx){fx=nx[0];fz=nx[1];}
+  else{const h=document.getElementById('hint');h.textContent='海唔行得㗎，點綠色陸地啦！';setTimeout(()=>h.textContent='全島總覽 · 點地面派貓村民過去 · 拖曳轉視角 · 兩指縮放 · 撳書櫃開目錄',1500);return;}}
+ dest=new THREE.Vector3(fx,.7,fz);route=buildRoute(P.position.x,P.position.z,fx,fz);}
+let pd=null;
+ren.domElement.addEventListener('pointerdown',e=>{pd={x:e.clientX,y:e.clientY,t:performance.now()};if(EDIT&&DESIGN)tryStartDrag(e);});
+ren.domElement.addEventListener('pointerup',e=>{if(dragSt){endDrag();pd=null;return;}if(!pd)return;
+ const dx=e.clientX-pd.x,dy=e.clientY-pd.y,dt=performance.now()-pd.t;pd=null;
+ if(dx*dx+dy*dy<64&&dt<500)pick(e);});
+document.getElementById('collapseL').onclick=()=>document.getElementById('left').classList.toggle('hidden');
+document.getElementById('collapseR').onclick=()=>{document.getElementById('right').classList.toggle('hidden');};
+// pointing markers: hover ring + dest pin with ripple
+const hoverRing=new THREE.Mesh(new THREE.RingGeometry(.5,.7,32),new THREE.MeshBasicMaterial({color:0x7CFC00,transparent:true,opacity:.9,side:THREE.DoubleSide}));
+hoverRing.rotation.x=-Math.PI/2;hoverRing.position.y=.75;hoverRing.visible=false;scene.add(hoverRing);
+const destG=new THREE.Group();
+const pin=new THREE.Mesh(new THREE.ConeGeometry(.3,.8,12),new THREE.MeshLambertMaterial({color:0xff5a5a}));pin.rotation.x=Math.PI;pin.position.y=1.6;
+const base=new THREE.Mesh(new THREE.RingGeometry(.4,.6,32),new THREE.MeshBasicMaterial({color:0xff5a5a,transparent:true,opacity:.9,side:THREE.DoubleSide}));
+base.rotation.x=-Math.PI/2;base.position.y=.06;
+destG.add(pin,base);destG.visible=false;scene.add(destG);
+const ripples=[];
+function ripple(x,y,z){const r=new THREE.Mesh(new THREE.RingGeometry(.3,.45,32),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.8,side:THREE.DoubleSide}));
+ r.rotation.x=-Math.PI/2;r.position.set(x,y,z);scene.add(r);ripples.push({m:r,t:0});}
+ren.domElement.addEventListener('pointermove',e=>{
+ const r=ren.domElement.getBoundingClientRect();mou.x=((e.clientX-r.left)/r.width)*2-1;mou.y=-((e.clientY-r.top)/r.height)*2+1;
+ ray.setFromCamera(mou,cam);const h=ray.intersectObjects(ground,false)[0];
+ if(!h){hoverRing.visible=false;return;}
+ hoverRing.visible=true;hoverRing.position.set(h.point.x,h.point.y+.06,h.point.z);
+ const ok=walkable(h.point.x,h.point.z);hoverRing.material.color.set(ok?0x7CFC00:0xff5a5a);});
+const _oldStep=stepP;
+stepP=function(dt){_oldStep(dt);
+ const tt=performance.now()/400;
+ hoverRing.scale.setScalar(1+Math.sin(tt*3)*.12);
+ if(dest){destG.visible=true;destG.position.set(dest.x,groundY(dest.x,dest.z),dest.z);
+  pin.position.y=1.6+Math.abs(Math.sin(tt*2))*.35;base.scale.setScalar(1+Math.sin(tt*2)*.15);
+  if(!stepP._rt||performance.now()-stepP._rt>350){stepP._rt=performance.now();ripple(dest.x,groundY(dest.x,dest.z)+.05,dest.z);}}
+ else destG.visible=false;
+ for(let i=ripples.length-1;i>=0;i--){const rp=ripples[i];rp.t+=dt;rp.m.scale.setScalar(1+rp.t*4);rp.m.material.opacity=.8-rp.t*1.2;
+  if(rp.t>.65){scene.remove(rp.m);rp.m.geometry.dispose();rp.m.material.dispose();ripples.splice(i,1);}}};
+
+ren.domElement.addEventListener('touchstart',e=>{if(e.touches.length===1)pick(e.touches[0]);},{passive:true});
+// 小人（同款低模方塊人：藍衫黃帽，同片入面館長隔離嗰個一樣）
+// chibi animal villager (ac-like but original: big-head kitty, pastel)
+// scale: total ~1.9 vs shelf 3.4; color: cream fur + mint shirt + pink blush
+const P=new THREE.Group();
+const furM=new THREE.MeshLambertMaterial({color:0xf7d9a8});
+const shirtM=new THREE.MeshLambertMaterial({color:0x8fe3c0});
+const darkM=new THREE.MeshLambertMaterial({color:0x5a4033});
+const body=new THREE.Mesh(new THREE.SphereGeometry(.42,12,10),shirtM);body.position.y=.62;body.scale.set(1,.85,.9);
+const headG=new THREE.Group();headG.position.y=1.35;
+const head=new THREE.Mesh(new THREE.SphereGeometry(.62,16,14),furM);headG.add(head);
+const earG=[];
+[-1,1].forEach(s=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.2,8,8),furM);e.position.set(.42*s,.5,0);e.scale.set(1,1.1,.6);headG.add(e);earG.push(e);
+ const inn=new THREE.Mesh(new THREE.SphereGeometry(.1,8,8),new THREE.MeshLambertMaterial({color:0xf5b8c1}));inn.position.set(.42*s,.5,.12);inn.scale.set(1,1,.4);headG.add(inn);});
+const eyeL=new THREE.Mesh(new THREE.SphereGeometry(.09,8,8),new THREE.MeshLambertMaterial({color:0x222222}));eyeL.position.set(-.22,.05,.53);
+const eyeR=eyeL.clone();eyeR.position.x=.22;
+const hlM=new THREE.MeshBasicMaterial({color:0xffffff});
+const hlL=new THREE.Mesh(new THREE.SphereGeometry(.03,6,6),hlM);hlL.position.set(-.19,.08,.6);
+const hlR=hlL.clone();hlR.position.x=.25;
+const blM=new THREE.MeshLambertMaterial({color:0xf5a0a8});
+const blL=new THREE.Mesh(new THREE.SphereGeometry(.09,8,8),blM);blL.position.set(-.38,-.15,.45);blL.scale.set(1,.6,.4);
+const blR=blL.clone();blR.position.x=.38;
+const nose=new THREE.Mesh(new THREE.SphereGeometry(.06,8,8),darkM);nose.position.set(0,-.08,.6);
+headG.add(eyeL,eyeR,hlL,hlR,blL,blR,nose);
+const armL=new THREE.Mesh(new THREE.SphereGeometry(.14,8,8),furM);armL.position.set(-.5,.7,0);armL.scale.set(1,1.6,1);
+const armR=armL.clone();armR.position.x=.5;
+const legL=new THREE.Mesh(new THREE.SphereGeometry(.16,8,8),darkM);legL.position.set(-.2,.16,0);
+const legR=legL.clone();legR.position.x=.2;
+const tail=new THREE.Mesh(new THREE.SphereGeometry(.14,8,8),furM);tail.position.set(0,.55,-.45);
+P.add(body,headG,armL,armR,legL,legR,tail);P.scale.setScalar(1.2);P.position.set(0,.7,6);scene.add(P);
+let walkMode=true,dest=null,route=[];const keys={};
+/* mouse-touch only: no keyboard */
+const bW=document.getElementById('bWalk'),bF=document.getElementById('bFly');
+ctl.enableDamping=true;ctl.dampingFactor=.08;ctl.touches={ONE:THREE.TOUCH.ROTATE,TWO:THREE.TOUCH.DOLLY_PAN};
+function setMode(w){walkMode=w;bW.classList.toggle('on',w);bF.classList.toggle('on',!w);
+ if(!w)dest=null;}
+bW.onclick=()=>setMode(true);bF.onclick=()=>setMode(false);
+// 撳地面行過去（_CONN：walk 先有用）
+const ground=[];Object.values(groups).forEach(g=>g.children.forEach(m=>{if(m.geometry&&m.geometry.type==='CylinderGeometry')ground.push(m);}));ground.push(sea);spokeMeshes.forEach(b=>ground.push(b));
+/* replaced by unified pointer handler below */
+function nearestLand(x,z){
+ let best=null,bd=1e9;
+ const consider=(px,pz)=>{if(walkable(px,pz)){const dd=(px-x)*(px-x)+(pz-z)*(pz-z);if(dd<bd){bd=dd;best=[px,pz];}}};
+ for(const I of ISLANDS){const dx=x-I.x,dz=z-I.z,d=Math.hypot(dx,dz)||.001;
+  for(let rr=(I.small?4:8);rr>=0;rr-=1)consider(I.x+dx/d*Math.min(d,rr),I.z+dz/d*Math.min(d,rr));}
+ for(const s of SPOKES){const dx=s[2]-s[0],dz=s[3]-s[1],L2=dx*dx+dz*dz||1;let tt=((x-s[0])*dx+(z-s[1])*dz)/L2;tt=Math.max(0,Math.min(1,tt));consider(s[0]+dx*tt,s[1]+dz*tt);}
+ return best;}
+const NODES={},LINKS={};
+ISLANDS.forEach((I,i)=>{NODES['I'+i]=[I.x,I.z];LINKS['I'+i]=[];});
+ISLANDS.forEach((I,i)=>{const m='M'+i;if(I.parent){const pi=ISLANDS.findIndex(o=>o.id===I.parent);if(pi<0)return;NODES[m]=[(I.x+ISLANDS[pi].x)/2,(I.z+ISLANDS[pi].z)/2];LINKS['I'+pi].push(m);LINKS[m]=['I'+pi,'I'+i];LINKS['I'+i].push(m);return;}if(!i)return;NODES[m]=[I.x/2,I.z/2];LINKS['I0'].push(m);LINKS[m]=['I0','I'+i];LINKS['I'+i].push(m);});
+
+function nearestNode(x,z){let b=null,bd=1e18;for(const k in NODES){const dx=x-NODES[k][0],dz=z-NODES[k][1],d=dx*dx+dz*dz;if(d<bd){bd=d;b=k;}}return b;}
+function islandOf(x,z){for(let i=0;i<ISLANDS.length;i++){const dx=x-ISLANDS[i].x,dz=z-ISLANDS[i].z;if(dx*dx+dz*dz<64)return i;}return -1;}
+function buildRoute(px,pz,fx,fz){
+ const sn=nearestNode(px,pz),dn=nearestNode(fx,fz);
+ if(sn===dn)return[new THREE.Vector3(fx,.7,fz)];
+ const prev={[sn]:null},q=[sn];
+ while(q.length){const c=q.shift();if(c===dn)break;for(const n of LINKS[c])if(!(n in prev)){prev[n]=c;q.push(n);}}
+ if(!(dn in prev))return[new THREE.Vector3(fx,.7,fz)];
+ const chain=[];let c=dn;while(c){chain.unshift(c);c=prev[c];}
+ const pts=[];const si=islandOf(px,pz);
+
+ if(si>=0){const C0=ISLANDS[si];if(Math.hypot(px-C0.x,pz-C0.z)>1.5)pts.push(new THREE.Vector3(C0.x+2,.7,C0.z+2));}
+ for(let i=1;i<chain.length;i++){const w=NODES[chain[i]];
+  if(w[0]===0&&w[1]===0)pts.push(new THREE.Vector3(2,.7,2));
+  else pts.push(new THREE.Vector3(w[0],.7,w[1]));}
+ pts.push(new THREE.Vector3(fx,.7,fz));
+ // dedupe + string-pulling: skip any waypoint with clear straight line
+ const sm=[pts[0]];let k=0;
+ for(let i=1;i<pts.length;i++){if(lineClear(sm[k].x,sm[k].z,pts[i].x,pts[i].z)){if(i===pts.length-1)sm.push(pts[i]);}
+  else{sm.push(pts[i-1]);k=sm.length-1;sm.push(pts[i]);k=sm.length-1;}}
+ const out=[];for(const q of sm){if(!out.length||Math.hypot(q.x-out[out.length-1].x,q.z-out[out.length-1].z)>.5)out.push(q);}
+ return out;}
+function lineClear(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az),n=Math.max(1,Math.ceil(d/.5));
+ for(let i=0;i<=n;i++){if(!walkable(ax+(bx-ax)*i/n,az+(bz-az)*i/n))return false;}return true;}
+function distSeg(px,pz,ax,az,bx,bz){const dx=bx-ax,dz=bz-az,L2=dx*dx+dz*dz||1;let tt=((px-ax)*dx+(pz-az)*dz)/L2;tt=Math.max(0,Math.min(1,tt));return Math.hypot(px-(ax+dx*tt),pz-(az+dz*tt));}
+function onBridge(x,z){for(const s of SPOKES)if(distSeg(x,z,s[0],s[1],s[2],s[3])<1.6)return true;return false;}
+function walkable(x,z){
+ for(const I of ISLANDS){const R=I.small?4.6:8;const dx=x-I.x,dz=z-I.z;if(dx*dx+dz*dz<R*R)return true;}
+ return onBridge(x,z);}
+function groundY(x,z){return onBridge(x,z)?.15:.7;}
+function stepP(dt){const sp=6*dt;
+ const tgt=route.length?route[0]:dest;
+ if(tgt){const v=new THREE.Vector3(tgt.x-P.position.x,0,tgt.z-P.position.z);
+  const arrive=route.length>1?.9:.35;
+  if(v.length()<arrive){if(route.length)route.shift();else dest=null;}
+  else{v.normalize();
+   const want=Math.atan2(v.x,v.z);let dA=want-P.rotation.y;
+   while(dA>Math.PI)dA-=Math.PI*2;while(dA<-Math.PI)dA+=Math.PI*2;
+   P.rotation.y+=Math.max(-10*dt,Math.min(10*dt,dA));
+   const fx2=Math.sin(P.rotation.y),fz2=Math.cos(P.rotation.y);
+   const dot=fx2*v.x+fz2*v.z;
+   if(dot>.3){const nx=P.position.x+v.x*sp,nz=P.position.z+v.z*sp;
+    if(walkable(nx,nz)){P.position.x=nx;P.position.z=nz;}
+    else if(walkable(nx,P.position.z))P.position.x=nx;
+    else if(walkable(P.position.x,nz))P.position.z=nz;
+    else{if(route.length)route.shift();else dest=null;}}}}
+ const gh=groundY(P.position.x,P.position.z);
+ P.position.y+=(gh-P.position.y)*Math.min(1,dt*8);
+ const moving=!!(dest||route.length);const tt=performance.now()/280;
+ if(moving){P.position.y+=Math.abs(Math.sin(tt*2))*.12;P.rotation.z=Math.sin(tt*2)*.08;
+  headG.rotation.z=Math.sin(tt*2)*-.12;headG.position.y=1.35+Math.abs(Math.sin(tt*2))*.06;
+  armL.position.z=Math.sin(tt*2)*.25;armR.position.z=-Math.sin(tt*2)*.25;
+  legL.position.z=-Math.sin(tt*2)*.25;legR.position.z=Math.sin(tt*2)*.25;
+  tail.position.x=Math.sin(tt*2)*.06;}
+ else{const br=Math.sin(performance.now()/900)*.03;body.scale.set(1,.85+br,.9);P.rotation.z*=.9;headG.rotation.z*=.9;
+  const bl=(performance.now()%3600)<120;eyeL.scale.y=eyeR.scale.y=bl?.1:1;}
+ if(walkMode){ctl.target.lerp(new THREE.Vector3(P.position.x,1.5,P.position.z),.12);
+  const off=new THREE.Vector3().subVectors(cam.position,ctl.target);if(off.length()>20)off.setLength(20);if(off.length()<10)off.setLength(10);
+  cam.position.copy(ctl.target).add(off);}}
+setMode(false);ctl.target.set(0,0,0);cam.position.set(0,EXT*1.5,EXT*1.9);
+let lastT=performance.now();
+(function loop(){requestAnimationFrame(loop);const n=performance.now();stepP(Math.min((n-lastT)/1000,.05));lastT=n;ren.render(scene,cam);})();
+addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();ren.setSize(innerWidth,innerHeight);});
+ensureEdit().then(ok=>{if(ok){EDIT=true;buildShelves();buildExportBtn();}});
+
+</script>
+</body>
+</html>

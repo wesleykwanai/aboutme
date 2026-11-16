@@ -1,0 +1,418 @@
+[
+ {
+  "dir": "小四P4_乘法(二)_4N1",
+  "slug": "4N1_乘法(二)",
+  "pages": [
+   "pics/P4/4N1_乘法(二)/p01.webp",
+   "pics/P4/4N1_乘法(二)/p02.webp",
+   "pics/P4/4N1_乘法(二)/p03.webp",
+   "pics/P4/4N1_乘法(二)/p04.webp",
+   "pics/P4/4N1_乘法(二)/p05.webp",
+   "pics/P4/4N1_乘法(二)/p06.webp",
+   "pics/P4/4N1_乘法(二)/p07.webp",
+   "pics/P4/4N1_乘法(二)/p08.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_乘法_4N1",
+  "slug": "4N1_乘法",
+  "pages": [
+   "pics/P4/4N1_乘法/p01.webp",
+   "pics/P4/4N1_乘法/p02.webp",
+   "pics/P4/4N1_乘法/p03.webp",
+   "pics/P4/4N1_乘法/p04.webp",
+   "pics/P4/4N1_乘法/p05.webp",
+   "pics/P4/4N1_乘法/p06.webp",
+   "pics/P4/4N1_乘法/p07.webp",
+   "pics/P4/4N1_乘法/p08.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_乘除混合計算_4N5",
+  "slug": "4N5_乘除混合計算",
+  "pages": [
+   "pics/P4/4N5_乘除混合計算/p01.webp",
+   "pics/P4/4N5_乘除混合計算/p02.webp",
+   "pics/P4/4N5_乘除混合計算/p03.webp",
+   "pics/P4/4N5_乘除混合計算/p04.webp",
+   "pics/P4/4N5_乘除混合計算/p05.webp",
+   "pics/P4/4N5_乘除混合計算/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_倍數_4N3",
+  "slug": "4N3_倍數",
+  "pages": [
+   "pics/P4/4N3_倍數/p01.webp",
+   "pics/P4/4N3_倍數/p02.webp",
+   "pics/P4/4N3_倍數/p03.webp",
+   "pics/P4/4N3_倍數/p04.webp",
+   "pics/P4/4N3_倍數/p05.webp",
+   "pics/P4/4N3_倍數/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_公倍數和最小公倍數_4N4",
+  "slug": "4N4_公倍數和最小公倍數",
+  "pages": [
+   "pics/P4/4N4_公倍數和最小公倍數/p01.webp",
+   "pics/P4/4N4_公倍數和最小公倍數/p02.webp",
+   "pics/P4/4N4_公倍數和最小公倍數/p03.webp",
+   "pics/P4/4N4_公倍數和最小公倍數/p04.webp",
+   "pics/P4/4N4_公倍數和最小公倍數/p05.webp",
+   "pics/P4/4N4_公倍數和最小公倍數/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_公因數和最大公因數_4N4",
+  "slug": "4N4_公因數和最大公因數",
+  "pages": [
+   "pics/P4/4N4_公因數和最大公因數/p01.webp",
+   "pics/P4/4N4_公因數和最大公因數/p02.webp",
+   "pics/P4/4N4_公因數和最大公因數/p03.webp",
+   "pics/P4/4N4_公因數和最大公因數/p04.webp",
+   "pics/P4/4N4_公因數和最大公因數/p05.webp",
+   "pics/P4/4N4_公因數和最大公因數/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_分數一_4N6",
+  "slug": "4N6_分數一",
+  "pages": [
+   "pics/P4/4N6_分數一/p01.webp",
+   "pics/P4/4N6_分數一/p02.webp",
+   "pics/P4/4N6_分數一/p03.webp",
+   "pics/P4/4N6_分數一/p04.webp",
+   "pics/P4/4N6_分數一/p05.webp",
+   "pics/P4/4N6_分數一/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_分數二_4N6",
+  "slug": "4N6_分數二",
+  "pages": [
+   "pics/P4/4N6_分數二/p01.webp",
+   "pics/P4/4N6_分數二/p02.webp",
+   "pics/P4/4N6_分數二/p03.webp",
+   "pics/P4/4N6_分數二/p04.webp",
+   "pics/P4/4N6_分數二/p05.webp",
+   "pics/P4/4N6_分數二/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_分數加法_4N6",
+  "slug": "4N6_分數加法",
+  "pages": [
+   "pics/P4/4N6_分數加法/p01.webp",
+   "pics/P4/4N6_分數加法/p02.webp",
+   "pics/P4/4N6_分數加法/p03.webp",
+   "pics/P4/4N6_分數加法/p04.webp",
+   "pics/P4/4N6_分數加法/p05.webp",
+   "pics/P4/4N6_分數加法/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_分數加減混合計算_4N6",
+  "slug": "4N6_分數加減混合計算",
+  "pages": [
+   "pics/P4/4N6_分數加減混合計算/p01.webp",
+   "pics/P4/4N6_分數加減混合計算/p02.webp",
+   "pics/P4/4N6_分數加減混合計算/p03.webp",
+   "pics/P4/4N6_分數加減混合計算/p04.webp",
+   "pics/P4/4N6_分數加減混合計算/p05.webp",
+   "pics/P4/4N6_分數加減混合計算/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_分數減法_4N6",
+  "slug": "4N6_分數減法",
+  "pages": [
+   "pics/P4/4N6_分數減法/p01.webp",
+   "pics/P4/4N6_分數減法/p02.webp",
+   "pics/P4/4N6_分數減法/p03.webp",
+   "pics/P4/4N6_分數減法/p04.webp",
+   "pics/P4/4N6_分數減法/p05.webp",
+   "pics/P4/4N6_分數減法/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_周界_4M1",
+  "slug": "4M1_周界",
+  "pages": [
+   "pics/P4/4M1_周界/p01.webp",
+   "pics/P4/4M1_周界/p02.webp",
+   "pics/P4/4M1_周界/p03.webp",
+   "pics/P4/4M1_周界/p04.webp",
+   "pics/P4/4M1_周界/p05.webp",
+   "pics/P4/4M1_周界/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_四則混合計算_4N5",
+  "slug": "4N5_四則混合計算",
+  "pages": [
+   "pics/P4/4N5_四則混合計算/p01.webp",
+   "pics/P4/4N5_四則混合計算/p02.webp",
+   "pics/P4/4N5_四則混合計算/p03.webp",
+   "pics/P4/4N5_四則混合計算/p04.webp",
+   "pics/P4/4N5_四則混合計算/p05.webp",
+   "pics/P4/4N5_四則混合計算/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_四邊形的性質_4S1",
+  "slug": "4S1_四邊形的性質",
+  "pages": [
+   "pics/P4/4S1_四邊形的性質/p01.webp",
+   "pics/P4/4S1_四邊形的性質/p02.webp",
+   "pics/P4/4S1_四邊形的性質/p03.webp",
+   "pics/P4/4S1_四邊形的性質/p04.webp",
+   "pics/P4/4S1_四邊形的性質/p05.webp",
+   "pics/P4/4S1_四邊形的性質/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_四邊形的關係_4S1",
+  "slug": "4S1_四邊形的關係",
+  "pages": [
+   "pics/P4/4S1_四邊形的關係/p01.webp",
+   "pics/P4/4S1_四邊形的關係/p02.webp",
+   "pics/P4/4S1_四邊形的關係/p03.webp",
+   "pics/P4/4S1_四邊形的關係/p04.webp",
+   "pics/P4/4S1_四邊形的關係/p05.webp",
+   "pics/P4/4S1_四邊形的關係/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_因數_4N3",
+  "slug": "4N3_因數",
+  "pages": [
+   "pics/P4/4N3_因數/p01.webp",
+   "pics/P4/4N3_因數/p02.webp",
+   "pics/P4/4N3_因數/p03.webp",
+   "pics/P4/4N3_因數/p04.webp",
+   "pics/P4/4N3_因數/p05.webp",
+   "pics/P4/4N3_因數/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_小數加法_4N8",
+  "slug": "4N8_小數加法",
+  "pages": [
+   "pics/P4/4N8_小數加法/p01.webp",
+   "pics/P4/4N8_小數加法/p02.webp",
+   "pics/P4/4N8_小數加法/p03.webp",
+   "pics/P4/4N8_小數加法/p04.webp",
+   "pics/P4/4N8_小數加法/p05.webp",
+   "pics/P4/4N8_小數加法/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_小數減法_4N8",
+  "slug": "4N8_小數減法",
+  "pages": [
+   "pics/P4/4N8_小數減法/p01.webp",
+   "pics/P4/4N8_小數減法/p02.webp",
+   "pics/P4/4N8_小數減法/p03.webp",
+   "pics/P4/4N8_小數減法/p04.webp",
+   "pics/P4/4N8_小數減法/p05.webp",
+   "pics/P4/4N8_小數減法/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_小數的認識_4N7",
+  "slug": "4N7_小數的認識",
+  "pages": [
+   "pics/P4/4N7_小數的認識/p01.webp",
+   "pics/P4/4N7_小數的認識/p02.webp",
+   "pics/P4/4N7_小數的認識/p03.webp",
+   "pics/P4/4N7_小數的認識/p04.webp",
+   "pics/P4/4N7_小數的認識/p05.webp",
+   "pics/P4/4N7_小數的認識/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_平面圖形的分割_4S2",
+  "slug": "4S2_平面圖形的分割",
+  "pages": [
+   "pics/P4/4S2_平面圖形的分割/p01.webp",
+   "pics/P4/4S2_平面圖形的分割/p02.webp",
+   "pics/P4/4S2_平面圖形的分割/p03.webp",
+   "pics/P4/4S2_平面圖形的分割/p04.webp",
+   "pics/P4/4S2_平面圖形的分割/p05.webp",
+   "pics/P4/4S2_平面圖形的分割/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_平面圖形的拼砌_4S2",
+  "slug": "4S2_平面圖形的拼砌",
+  "pages": [
+   "pics/P4/4S2_平面圖形的拼砌/p01.webp",
+   "pics/P4/4S2_平面圖形的拼砌/p02.webp",
+   "pics/P4/4S2_平面圖形的拼砌/p03.webp",
+   "pics/P4/4S2_平面圖形的拼砌/p04.webp",
+   "pics/P4/4S2_平面圖形的拼砌/p05.webp",
+   "pics/P4/4S2_平面圖形的拼砌/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_整除性_4N2",
+  "slug": "4N2_整除性",
+  "pages": [
+   "pics/P4/4N2_整除性/p01.webp",
+   "pics/P4/4N2_整除性/p02.webp",
+   "pics/P4/4N2_整除性/p03.webp",
+   "pics/P4/4N2_整除性/p04.webp",
+   "pics/P4/4N2_整除性/p05.webp",
+   "pics/P4/4N2_整除性/p06.webp",
+   "pics/P4/4N2_整除性/p07.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_方向和位置_4S3",
+  "slug": "4S3_方向和位置",
+  "pages": [
+   "pics/P4/4S3_方向和位置/p01.webp",
+   "pics/P4/4S3_方向和位置/p02.webp",
+   "pics/P4/4S3_方向和位置/p03.webp",
+   "pics/P4/4S3_方向和位置/p04.webp",
+   "pics/P4/4S3_方向和位置/p05.webp",
+   "pics/P4/4S3_方向和位置/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_棒形圖_4D1",
+  "slug": "4D1_棒形圖",
+  "pages": [
+   "pics/P4/4D1_棒形圖/p01.webp",
+   "pics/P4/4D1_棒形圖/p02.webp",
+   "pics/P4/4D1_棒形圖/p03.webp",
+   "pics/P4/4D1_棒形圖/p04.webp",
+   "pics/P4/4D1_棒形圖/p05.webp",
+   "pics/P4/4D1_棒形圖/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_短除法_4N4",
+  "slug": "4N4_短除法",
+  "pages": [
+   "pics/P4/4N4_短除法/p01.webp",
+   "pics/P4/4N4_短除法/p02.webp",
+   "pics/P4/4N4_短除法/p03.webp",
+   "pics/P4/4N4_短除法/p04.webp",
+   "pics/P4/4N4_短除法/p05.webp",
+   "pics/P4/4N4_短除法/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_菱形_4S1",
+  "slug": "4S1_菱形",
+  "pages": [
+   "pics/P4/4S1_菱形/p01.webp",
+   "pics/P4/4S1_菱形/p02.webp",
+   "pics/P4/4S1_菱形/p03.webp",
+   "pics/P4/4S1_菱形/p04.webp",
+   "pics/P4/4S1_菱形/p05.webp",
+   "pics/P4/4S1_菱形/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_質數和合成數_4N3",
+  "slug": "4N3_質數和合成數",
+  "pages": [
+   "pics/P4/4N3_質數和合成數/p01.webp",
+   "pics/P4/4N3_質數和合成數/p02.webp",
+   "pics/P4/4N3_質數和合成數/p03.webp",
+   "pics/P4/4N3_質數和合成數/p04.webp",
+   "pics/P4/4N3_質數和合成數/p05.webp",
+   "pics/P4/4N3_質數和合成數/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_連乘法_4N1",
+  "slug": "4N1_連乘法",
+  "pages": [
+   "pics/P4/4N1_連乘法/p01.webp",
+   "pics/P4/4N1_連乘法/p02.webp",
+   "pics/P4/4N1_連乘法/p03.webp",
+   "pics/P4/4N1_連乘法/p04.webp",
+   "pics/P4/4N1_連乘法/p05.webp",
+   "pics/P4/4N1_連乘法/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_連除法_4N2",
+  "slug": "4N2_連除法",
+  "pages": [
+   "pics/P4/4N2_連除法/p01.webp",
+   "pics/P4/4N2_連除法/p02.webp",
+   "pics/P4/4N2_連除法/p03.webp",
+   "pics/P4/4N2_連除法/p04.webp",
+   "pics/P4/4N2_連除法/p05.webp",
+   "pics/P4/4N2_連除法/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_除加混合計算_4N5",
+  "slug": "4N5_除加混合計算",
+  "pages": [
+   "pics/P4/4N5_除加混合計算/p01.webp",
+   "pics/P4/4N5_除加混合計算/p02.webp",
+   "pics/P4/4N5_除加混合計算/p03.webp",
+   "pics/P4/4N5_除加混合計算/p04.webp",
+   "pics/P4/4N5_除加混合計算/p05.webp",
+   "pics/P4/4N5_除加混合計算/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_除法(一)_4N2",
+  "slug": "4N2_除法(一)",
+  "pages": [
+   "pics/P4/4N2_除法(一)/p01.webp",
+   "pics/P4/4N2_除法(一)/p02.webp",
+   "pics/P4/4N2_除法(一)/p03.webp",
+   "pics/P4/4N2_除法(一)/p04.webp",
+   "pics/P4/4N2_除法(一)/p05.webp",
+   "pics/P4/4N2_除法(一)/p06.webp",
+   "pics/P4/4N2_除法(一)/p07.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_除法(二)_4N2",
+  "slug": "4N2_除法(二)",
+  "pages": [
+   "pics/P4/4N2_除法(二)/p01.webp",
+   "pics/P4/4N2_除法(二)/p02.webp",
+   "pics/P4/4N2_除法(二)/p03.webp",
+   "pics/P4/4N2_除法(二)/p04.webp",
+   "pics/P4/4N2_除法(二)/p05.webp",
+   "pics/P4/4N2_除法(二)/p06.webp",
+   "pics/P4/4N2_除法(二)/p07.webp",
+   "pics/P4/4N2_除法(二)/p08.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_除減混合計算_4N5",
+  "slug": "4N5_除減混合計算",
+  "pages": [
+   "pics/P4/4N5_除減混合計算/p01.webp",
+   "pics/P4/4N5_除減混合計算/p02.webp",
+   "pics/P4/4N5_除減混合計算/p03.webp",
+   "pics/P4/4N5_除減混合計算/p04.webp",
+   "pics/P4/4N5_除減混合計算/p05.webp",
+   "pics/P4/4N5_除減混合計算/p06.webp"
+  ]
+ },
+ {
+  "dir": "小四P4_面積_4M2",
+  "slug": "4M2_面積",
+  "pages": [
+   "pics/P4/4M2_面積/p01.webp",
+   "pics/P4/4M2_面積/p02.webp",
+   "pics/P4/4M2_面積/p03.webp",
+   "pics/P4/4M2_面積/p04.webp",
+   "pics/P4/4M2_面積/p05.webp",
+   "pics/P4/4M2_面積/p06.webp"
+  ]
+ }
+]

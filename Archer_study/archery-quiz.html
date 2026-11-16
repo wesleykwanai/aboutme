@@ -1,0 +1,2864 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>archery_hero</title>
+<style>
+  :root{ --gold:#d9b45b; --ink:#2b1d10; }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{margin:0;height:100%;overflow:hidden;background:#bfe3ff;
+    font-family:"PingFang HK","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+    -webkit-user-select:none;user-select:none}
+  canvas{touch-action:none;-webkit-touch-callout:none}
+  #cv{position:fixed;inset:0;display:block}
+
+  /* ---------- HUD ---------- */
+  .hud{position:fixed;z-index:5;pointer-events:none}
+  #score{left:18px;top:14px;background:rgba(255,250,235,.92);border:3px solid var(--gold);
+    border-radius:14px;padding:6px 14px;color:var(--ink);font-weight:700;font-size:15px;
+    box-shadow:0 3px 0 rgba(0,0,0,.18)}
+  #score b{font-size:26px;margin-left:6px}
+  #flowers{margin-left:12px;letter-spacing:2px;font-size:17px;color:#c9bda6}
+#timer{margin-left:12px;padding-left:12px;border-left:2px solid rgba(192,138,42,.35);font-weight:800;color:#6b4b18;font-size:16px;font-variant-numeric:tabular-nums}
+  #flowers .on{color:#e0483b}
+
+  #sound{right:16px;top:14px;pointer-events:auto;background:rgba(255,250,235,.92);
+    border:3px solid var(--gold);border-radius:12px;padding:6px 12px;font-size:14px;
+    font-weight:700;color:var(--ink);cursor:pointer}
+
+  #progress{left:22px;top:78px;width:16px;height:46vh;background:rgba(255,255,255,.55);
+    border:3px solid var(--gold);border-radius:10px;overflow:hidden}
+  #progress i{display:block;position:absolute;bottom:0;left:0;right:0;height:0;
+    background:linear-gradient(#63e7c4,#2bb89a);transition:height .35s}
+
+  #banner{left:50%;top:16px;transform:translateX(-50%);background:rgba(43,29,16,.82);
+    color:#ffe9b0;padding:6px 18px;border-radius:999px;font-size:13px;font-weight:700}
+
+  /* ---------- crosshair ---------- */
+  #cross{position:fixed;z-index:4;width:34px;height:34px;margin:-17px 0 0 -17px;
+    pointer-events:none;display:none}
+  #cross:before,#cross:after{content:"";position:absolute;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.55)}
+  #cross:before{left:50%;top:0;bottom:0;width:2px;margin-left:-1px}
+  #cross:after{top:50%;left:0;right:0;height:2px;margin-top:-1px}
+  #cross.hot{filter:drop-shadow(0 0 6px #ffd75e)}
+
+  /* ---------- question card ---------- */
+  #panel{position:fixed;z-index:6;left:50%;bottom:18px;transform:translateX(-50%);
+    width:min(960px,94vw);pointer-events:none}
+  #card{position:relative;background:linear-gradient(#fffdf4,#f6ecd6);
+    border:4px solid var(--gold);border-radius:20px;padding:14px 22px 12px;
+    box-shadow:0 6px 0 rgba(90,58,18,.35),inset 0 0 0 3px #fff8e2;color:var(--ink)}
+  #qtext{font-size:clamp(15px,2.1vw,23px);font-weight:700;line-height:1.45;text-align:center;min-height:1.4em}
+  #qmeta{text-align:center;font-size:12px;color:#9a7f4e;font-weight:700;margin-top:4px;letter-spacing:1px}
+  #opts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;pointer-events:auto}
+  #sol{margin-top:9px;text-align:center;font-size:13px;font-weight:700;line-height:1.55;color:#8a5a2b}
+  #sol b{color:#2b1d10}
+  #sol:empty{display:none}
+#btnSol{margin:9px auto 0;display:block;border:2px solid #cdb98c;background:#fffaf0;color:#6b5730;border-radius:10px;padding:5px 12px;font-size:12.5px;font-weight:800}
+#loadTip{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:9;background:rgba(20,14,8,.82);color:#f7edda;padding:8px 18px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:.5px}
+  .opt{display:flex;align-items:center;gap:8px;background:#fff;border:3px solid #e2d4b4;
+    border-radius:12px;padding:8px 10px;font-size:clamp(13px,1.6vw,17px);font-weight:700;
+    cursor:pointer;transition:.12s;color:var(--ink)}
+  .opt:hover{border-color:var(--gold);transform:translateY(-2px)}
+  .opt .k{flex:0 0 26px;height:26px;border-radius:50%;background:#efe6cf;color:#8a6c33;
+    display:grid;place-items:center;font-size:13px}
+  .opt.right{border-color:#2bb89a;background:#e6fbf5}
+  .opt.wrong{border-color:#e0483b;background:#fdeceb}
+
+  #toast{position:fixed;z-index:7;left:50%;top:38%;transform:translate(-50%,-50%) scale(.8);
+    font-size:clamp(28px,5vw,54px);font-weight:900;color:#fff;opacity:0;pointer-events:none;
+    text-shadow:0 4px 0 rgba(0,0,0,.35);transition:.22s}
+  #toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+  /* ---------- 力度計 ---------- */
+  #pmWrap{position:fixed;z-index:6;right:16px;top:15%;height:56vh;width:64px;pointer-events:auto;
+    touch-action:none;background:rgba(255,250,235,.34);border:3px solid var(--gold);
+    border-radius:18px;box-shadow:0 3px 0 rgba(0,0,0,.18);opacity:.45;transition:opacity .2s}
+  #pmWrap.on{opacity:1}
+  #pmTrack{position:absolute;left:9px;right:9px;bottom:9px;top:9px;border-radius:11px;
+    overflow:hidden;background:rgba(43,29,16,.30)}
+  #pmFill{position:absolute;left:0;right:0;bottom:0;height:0;
+    background:linear-gradient(#ffd75e,#e0483b)}
+  #pmMark{position:absolute;left:-6px;right:-6px;height:4px;bottom:0;background:#fff;
+    box-shadow:0 0 6px rgba(0,0,0,.55)}
+  #pmWrap.hot{border-color:#e0483b;box-shadow:0 0 0 5px rgba(224,72,59,.22)}
+  #pmWrap.good #pmFill{background:linear-gradient(#9df3d3,#2bb89a)}
+  #pmGood{position:absolute;left:9px;right:9px;height:16.5%;bottom:38%;pointer-events:none;
+    background:rgba(43,184,154,.30);border-top:2px solid #2bb89a;border-bottom:2px solid #2bb89a}
+  /* 完美力度區：42.5–47.5%，實測這一段剛好打中金心（Δy≈0） */
+  #pmPerfect{position:absolute;left:9px;right:9px;height:5%;bottom:42.5%;pointer-events:none;
+    background:rgba(255,214,90,.9);border-radius:4px;box-shadow:0 0 9px rgba(255,200,60,.95)}
+  #pmWrap.perfect{border-color:#ffd75e;box-shadow:0 0 0 6px rgba(255,215,94,.40)}
+  #pmWrap.perfect #pmFill{background:linear-gradient(#fff6c0,#ffb648)}
+  /* ---- 裝置模式切換 ---- */
+  #devSeg{position:fixed;z-index:30;right:16px;top:58px;display:flex;gap:6px;pointer-events:auto}
+  #devSeg button{font:800 12px/1 system-ui,-apple-system,'PingFang HK','Microsoft JhengHei',sans-serif;
+    color:#5c4619;background:rgba(255,250,235,.92);border:2px solid var(--gold);border-radius:999px;
+    padding:7px 10px;cursor:pointer}
+  #devSeg button[aria-pressed="true"]{background:linear-gradient(#ffe9a8,#f0c962);color:#3a2708;box-shadow:0 2px 0 #b8873a}
+  /* 平板上：按鈕放大、力度計周邊多一圈看不見的「手指區」 */
+  body[data-dev="touch"] #devSeg button{padding:10px 15px;font-size:14px}
+  #pmPad{position:fixed;z-index:6;pointer-events:none}
+  body[data-dev="touch"] #pmPad{pointer-events:auto;right:0;top:7%;height:72vh;width:132px}
+  #pmRead{position:fixed;z-index:6;right:88px;top:15%;width:124px;text-align:right;
+    pointer-events:none;font-variant-numeric:tabular-nums}
+  #pmRead b{display:block;font-size:26px;font-weight:900;color:#2b1d10;line-height:1;
+    text-shadow:0 2px 0 rgba(255,255,255,.75)}
+  #pmRead i{display:block;font-style:normal;font-size:13px;font-weight:800;color:#6b5730;
+    margin-top:3px;text-shadow:0 1px 0 rgba(255,255,255,.8)}
+  #pmHint{position:absolute;left:50%;top:-32px;transform:translateX(-50%);white-space:nowrap;
+    font-size:12px;font-weight:800;color:#6b5730;background:rgba(255,250,235,.94);
+    padding:3px 10px;border-radius:999px;border:2px solid var(--gold)}
+  #aimHint{position:fixed;z-index:5;right:16px;bottom:calc(18px + 118px);
+    font-size:12px;font-weight:700;color:#6b5730;background:rgba(255,250,235,.82);
+    padding:3px 12px;border-radius:999px;pointer-events:none}
+
+  /* ---------- 連擊 / 暗角 / 開場 ---------- */
+  #combo{position:fixed;z-index:7;left:50%;top:27%;transform:translate(-50%,-50%) scale(.85);
+    font-size:clamp(20px,3.2vw,36px);font-weight:900;color:#ffcc4d;opacity:0;pointer-events:none;
+    white-space:nowrap;text-shadow:0 3px 0 rgba(0,0,0,.38);transition:.18s}
+  #combo.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  #vig{position:fixed;inset:0;z-index:3;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 46%,rgba(0,0,0,0) 48%,rgba(58,38,8,.34) 100%)}
+  @keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.34)}100%{transform:scale(1)}}
+  #score.pop{animation:pop .42s ease-out}
+  #boot{position:fixed;inset:0;z-index:60;display:grid;place-items:center;text-align:center;
+    background:radial-gradient(circle at 50% 42%,#fff8e6,#f4e5c4 58%,#e7d1a6);
+    transition:opacity .45s ease}
+  #boot.off{opacity:0;pointer-events:none}
+  #boot b{display:block;font-size:clamp(24px,4.2vw,42px);color:#7a5a1e;letter-spacing:3px}
+  #boot i{display:block;margin:18px auto 0;width:min(48vw,330px);height:9px;border-radius:99px;
+    background:rgba(122,90,30,.16);overflow:hidden;position:relative}
+  #boot i::after{content:"";position:absolute;top:0;bottom:0;width:42%;border-radius:99px;
+    background:linear-gradient(#f0c962,#d9a63d);animation:bootrun 1.1s ease-in-out infinite}
+  #boot u{display:block;margin-top:14px;font-size:14px;font-weight:700;color:#8a7145;text-decoration:none}
+  @keyframes bootrun{0%{transform:translateX(-110%)}100%{transform:translateX(255%)}}
+
+  /* ---------- overlays ---------- */
+  .screen{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-start;justify-content:center;
+    overflow-y:auto;-webkit-overflow-scrolling:touch;
+    background:rgba(20,14,8,.72);backdrop-filter:blur(3px);padding:20px}
+  .screen[hidden]{display:none}
+  .screen > .box{margin:auto}   /* 矮身手機（橫放 iPhone）時可以滾動，唔會削走按鈕 */
+  .box{background:linear-gradient(#fffdf4,#f4e9d2);border:5px solid var(--gold);border-radius:24px;
+    padding:26px 30px;max-width:min(680px,94vw);text-align:center;color:var(--ink);
+    box-shadow:0 10px 0 rgba(0,0,0,.3)}
+  .box h1{margin:0 0 6px;font-size:clamp(22px,3.4vw,34px)}
+  .box p{margin:8px 0;font-size:14px;line-height:1.6;color:#6b5730}
+  .btn{display:inline-block;margin:6px 5px;padding:11px 22px;border-radius:999px;border:0;
+    background:linear-gradient(#f0c962,#d9a63d);color:#3a2708;font-weight:800;font-size:15px;
+    cursor:pointer;box-shadow:0 4px 0 #a9802a;touch-action:manipulation}
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 #a9802a}
+  .btn.ghost{background:#fff;box-shadow:0 4px 0 #d8cbb0;color:#6b5730}
+  code{background:#efe6cf;padding:1px 6px;border-radius:5px;font-size:12px}
+  .drop{border:3px dashed #cdb98c;border-radius:16px;padding:14px;margin-top:12px;font-size:13px;color:#8a7145}
+  .drop.over{border-color:#2bb89a;background:#e6fbf5}
+  input[type=file]{display:none}
+  #finalScore{font-size:52px;font-weight:900;color:#d9a63d;line-height:1.1;margin:6px 0}
+#lbBox{margin:12px 0 6px;text-align:left}
+#lbBox h3{margin:0 0 6px;font-size:15px;color:#6b5730}
+#lbList{list-style:none;margin:0;padding:0;font-size:14px;max-height:190px;overflow:auto;border-radius:10px}
+#lbList li{display:flex;gap:8px;align-items:center;padding:4px 8px;border-radius:8px}
+#lbList li:nth-child(odd){background:#fbf4e4}
+#lbList li.me{background:#ffe9a8;font-weight:800}
+#lbList .rk{width:20px;color:#a08650;font-weight:800}
+#lbList .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#lbList .sc{font-weight:800;color:#8a6a1e}
+#lbList .tm{width:52px;text-align:right;color:#8a7145;font-size:12px}
+
+  /* ---------- 題庫來源 / 分享（老師設定畫面） ---------- */
+  .gsec{margin-top:12px;padding:14px;border:2px solid #cdb98c;border-radius:16px;background:#fffdf6;text-align:left}
+  .ghead{font-weight:800;font-size:15px;color:#3a2708;margin-bottom:9px}
+  .step{display:inline-block;width:20px;height:20px;text-align:center;border-radius:50%;
+    background:#3a2708;color:#f0c962;font:800 12px/20px inherit;margin-right:6px;vertical-align:1px}
+  .grow{display:flex;gap:8px}
+  .grow input{flex:1;min-width:0;padding:11px 12px;border:2px solid #cdb98c;border-radius:12px;
+    background:#fff;font:600 14px/1.2 inherit;color:#3a2708}
+  .grow input::placeholder{color:#b9a887;font-weight:500}
+  .gsm{flex:0 0 auto;padding:0 18px;height:auto}
+  .ghint{margin-top:8px;font-size:12px;line-height:1.55;color:#8a7145}
+  .ghint b{color:#6b5730}
+  .gmsg{display:none;margin-top:10px;padding:8px 11px;border-radius:11px;font-size:13px;font-weight:800}
+  .gmsg.ok{display:block;background:#e6fbf5;border:1px solid #8fd8c6;color:#176b5a}
+  .gmsg.err{display:block;background:#fdeceb;border:1px solid #e7a9a3;color:#9c2f26;font-weight:700;line-height:1.5}
+  .gmsg.run{display:block;background:#f6efdd;border:1px solid #ded0ae;color:#6b5730}
+  .grow2{display:flex;gap:8px;margin-top:9px}
+  .grow2 select{flex:1;min-width:0;padding:11px 12px;border:2px solid #cdb98c;border-radius:12px;
+    background:#fff;font:700 14px/1.2 inherit;color:#3a2708}
+  .share{display:flex;gap:12px;margin-top:10px;align-items:flex-start}
+  .share .link{flex:1;min-width:0;font:600 12px/1.5 ui-monospace,monospace;color:#3a2708;
+    background:#f3ecdb;border:1px solid #ded0ae;border-radius:10px;padding:9px 10px;word-break:break-all}
+  .qr{width:112px;height:112px;flex:0 0 auto;border:3px solid #3a2708;border-radius:8px;background:#fff;padding:4px;box-sizing:border-box}
+  .qr img{width:100%;height:100%;display:block}
+  .who{margin-top:4px;padding:12px;border:2px solid #cdb98c;border-radius:14px;background:#fffdf6;text-align:left}
+  .who .wholab{font:800 14px/1.4 inherit;color:#3a2708}
+  .nin{display:block;width:100%;box-sizing:border-box;margin:8px 0 10px;padding:11px 12px;
+    border:2px solid #cdb98c;border-radius:12px;background:#fff;color:#3a2708;
+    font-family:inherit;font-size:16px;font-weight:700;line-height:1.2;   /* ≥ 16px：iOS 才不會自動放大畫面 */
+    touch-action:manipulation}
+  .nin::placeholder{color:#b9a887;font-weight:500}
+  .gerr{margin-top:8px;padding:7px 10px;border-radius:9px;background:#fdeceb;border:1px solid #e7a9a3;
+    font-size:12.5px;font-weight:700;color:#9c2f26;text-align:left}
+  .sub{margin:9px 0 0;font-size:12px;color:#9a7f4e}
+  .hr{height:1px;background:#e7dcc4;margin:13px 0}
+
+  /* ---------- iPad 適配 ---------- */
+  #rotate{position:fixed;inset:0;z-index:40;display:none;place-items:center;text-align:center;
+    background:rgba(20,14,8,.92);color:#f7edda;padding:24px;font-size:15px;line-height:1.75}
+  #rotate b{display:block;font-size:23px;margin-bottom:10px;color:#f0c962}
+  @media (orientation: portrait) and (max-width: 1100px){
+  /* 只提示、不攔截：直向時縮成頂部小條，遊戲照常可玩 */
+  #rotate{display:block;inset:auto;left:50%;top:10px;transform:translateX(-50%);
+    background:rgba(20,14,8,.9);border-radius:14px;padding:8px 18px;pointer-events:none;z-index:40}
+  #rotate b{display:inline;font-size:15px;margin:0}
+  #rotate > *:not(b){display:none}
+}
+  @media (max-height: 560px){
+    #pmWrap{height:64vh;top:9%;width:56px}
+    #pmRead{right:78px;top:9%;width:112px}
+    #pmRead b{font-size:22px}
+    #pmRead i{font-size:12px}
+    #pmHint{font-size:11px}
+    #aimHint{bottom:calc(14px + 104px);font-size:11px}
+  }
+</style>
+</head>
+<body>
+<script>window.__E=[];window.addEventListener('error',function(e){window.__E.push((e.message||'?')+' @'+((e.filename||'').split('/').pop())+':'+e.lineno);});</script>
+<div id="boot"><div><b>射箭答題</b><i></i><u>正在載入弓箭手與場景…</u></div></div>
+<div id="vig"></div>
+<div id="rotate"><div><b>↻ 請將 iPad 打橫</b>呢個遊戲係横屏設計，打横後才睇得到箭靶同力度計。</div></div>
+
+<div id="cross"></div>
+
+<div id="pmWrap"><div id="pmTrack"><i id="pmGood"></i><i id="pmPerfect"></i><i id="pmFill"></i></div><b id="pmMark"></b>
+  <span id="pmHint">按住蓄力</span></div>
+<div id="pmRead"><b id="pmPct">0%</b><i id="pmSpd">— m/s</i><i>靶距 24m</i></div>
+<div id="devSeg">
+  <button type="button" data-d="pc">🖥 電腦</button>
+  <button type="button" data-d="touch">📱 平板</button>
+</div>
+<div id="pmPad"></div>
+<div id="aimHint">拖曳畫面 ◀ ▶ 瞄準目標</div>
+<div id="combo"></div>
+
+<div class="hud" id="score">得分<b id="scoreVal">0</b><span id="flowers"></span><span id="timer">⏱ 0:00</span></div>
+<button id="btnView" style="position:fixed;z-index:7;left:16px;top:66px;font:800 13px/1.2 'Noto Sans TC',system-ui,sans-serif;color:#3a2708;background:#f0c962;border:2px solid #b98c2e;border-radius:999px;padding:7px 13px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)">🎥 第三身</button>
+<button id="btnGyro" type="button" aria-pressed="false" style="display:none;position:fixed;z-index:7;left:16px;top:112px;font:800 13px/1.2 'Noto Sans TC',system-ui,sans-serif;color:#3a2708;background:#f0c962;border:2px solid #b98c2e;border-radius:999px;padding:7px 13px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)">🎮 陀螺儀瞄準</button>
+<button id="btnGyroC" type="button" style="display:none;position:fixed;z-index:7;left:16px;top:158px;font:800 13px/1.2 'Noto Sans TC',system-ui,sans-serif;color:#3a2708;background:#fffaf0;border:2px solid #b98c2e;border-radius:999px;padding:7px 13px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)">⟳ 置中</button>
+<button class="hud" id="sound" style="pointer-events:auto">🔇 靜音</button>
+<div class="hud" id="progress"><i></i></div>
+<div class="hud" id="banner">射中寫住正確答案嘅靶！</div>
+
+<div id="panel" hidden>
+  <div id="card">
+    <div id="qtext">—</div>
+    <div id="qmeta">◆ 第 1 題 ◆</div>
+    <div id="opts"></div>
+    <div id="sol"></div>
+    <button id="btnSol" hidden>↺ 重看解析</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="loadTip">⏳ 載入 3D 弓箭手…</div>
+
+<!-- ===== 開始畫面 ===== -->
+<div class="screen" id="startScreen">
+  <div class="box">
+    <h1>🏹 射箭答題</h1>
+    <p>四個箭靶 <b>A / B / C / D</b>，選項文字在下方答案卡。<br>
+       <b>① 拖曳畫面</b>左右瞄準 →　<b>② 按住右側力度計</b>蓄力 →　<b>③ 鬆手射箭</b>！<br>
+       <span style="font-size:13px;color:#9a7f4e">射中<b>正確答案</b>的靶才有分；越近靶心分數越高（金 10／9、紅 8／7、藍 6／5、黑 4／3）。</span></p>
+    <!-- ① 題庫來源 -->
+    <div class="gsec">
+      <div class="ghead"><span class="step">1</span>題庫來源</div>
+      <div class="grow">
+        <input id="sheetId" type="text" spellcheck="false" placeholder="貼上 Google 試算表連結或 ID">
+        <button class="btn gsm" id="btnSheet">讀取</button>
+      </div>
+      <div class="ghint">貼<b>完整網址</b>或 ID 都可以（ID ＝ 網址 <code>/d/</code> 與 <code>/edit</code> 之間那串約 44 個字）。<br>
+        一份試算表 ＝ 一個練習（讀第一張工作表）。試算表要設「<b>共用 → 知道連結的任何人 → 檢視者</b>」。</div>
+      <div class="gmsg" id="sheetMsg"></div>
+      <div class="grow2" id="topicRow" hidden>
+        <button class="btn" id="btnPreview" style="flex:1">🏹 預覽這個練習</button>
+      </div>
+    </div>
+
+    <!-- ② 分享 -->
+    <div class="gsec" id="shareBox" hidden>
+      <div class="ghead"><span class="step">2</span>分享給學生</div>
+      <div class="share">
+        <div class="link" id="shareLink">—</div>
+        <div class="qr"><img id="shareQR" alt="QR"></div>
+      </div>
+      <div class="grow2"><button class="btn ghost" id="btnCopy" style="flex:1">📋 複製連結</button></div>
+      <div class="grow" style="margin-top:8px">
+        <input id="lbUrl" type="text" spellcheck="false" placeholder="班級排行榜 API 網址（可選）" style="flex:1">
+        <input id="lbCls" type="text" class="nin" style="width:86px" placeholder="班別" maxlength="10">
+        <button class="btn gsm" id="btnLbSave">儲存</button>
+      </div>
+      <div class="ghint">填了才有排行榜：學生交卷後自動登上<b>全班同一份</b>排行榜。做法見 <code>排行榜_AppsScript.js</code>（Google 帳戶內完成，不用另外開帳號）。</div>
+      <div class="ghint">學生打開該連結只會見到<b>姓名輸入</b>同開始，唔會見到以上設定。</div>
+    </div>
+
+    <!-- ③ 自己試 -->
+    <div class="gsec">
+      <div class="ghead"><span class="step">3</span>自己試一次（同學生一樣）</div>
+      <input id="stuNameT" type="text" class="nin" placeholder="學生姓名／學號" maxlength="20">
+      <button class="btn" id="btnSample" style="width:100%">🏹 開始</button>
+    </div>
+
+    <div class="hr"></div>
+    <p class="sub" style="margin:0 0 8px">其他方法（可選）：</p>
+    <button class="btn ghost" id="btnResume" hidden>繼續上次進度</button>
+    <button class="btn ghost" id="btnPick">載入 CSV 檔案</button>
+    <button class="btn ghost" id="btnTpl">⬇ 下載題庫範本（Excel）</button>
+    <input type="file" id="fileInput" accept=".csv,text/csv">
+    <div class="drop" id="dropZone">或者直接將 CSV 檔案拖入呢個畫面</div>
+    <p class="sub">CSV 欄位：<code>題目, A, B, C, D, 答案</code>，可選第 7 欄 <code>解析</code>。</p>
+  </div>
+</div>
+
+<!-- ===== 學生畫面（由分享連結進入，不含任何設定） ===== -->
+<div class="screen" id="stuScreen" hidden>
+  <div class="box" style="text-align:center">
+    <h1>🏹 射箭答題</h1>
+    <p>四個箭靶 <b>A / B / C / D</b>，選項文字睇下方答案卡。<br>
+      <b>① 拖曳畫面</b>瞄準 →　<b>② 按住右側力度計</b>蓄力 →　<b>③ 鬆手射箭</b>！</p>
+    <div class="who">
+      <div class="wholab">請輸入你的姓名／學號</div>
+      <input id="stuName" type="text" class="nin" placeholder="例如：4A 陳小明" maxlength="20">
+      <button class="btn" id="btnStuStart" style="width:100%">🏹 開始</button>
+      <div class="gerr" id="stuErr" hidden>請先輸入姓名／學號</div>
+    </div>
+    <p class="sub">射中寫住正確答案的靶才得分，越近靶心越高分。</p>
+  </div>
+</div>
+
+<!-- ===== 結束畫面 ===== -->
+<div class="screen" id="endScreen" hidden>
+  <div class="box">
+    <h1>完成！</h1>
+    <div id="finalScore">0 / 0</div>
+    <p id="finalMsg" style="white-space:pre-line"></p>
+  <div id="lbBox" hidden>
+    <h3>🏆 班級排行榜</h3>
+    <ol id="lbList"></ol>
+    <button class="btn ghost" id="btnLbRefresh" style="margin-top:6px">🔄 重新整理</button>
+  </div>
+    <button class="btn" id="btnAgain">再玩一次</button>
+    <button class="btn ghost" id="btnExport">匯出成績 CSV</button>
+    <button class="btn ghost" id="btnHome">換題庫</button>
+  </div>
+</div>
+
+<!-- three.js：優先本機檔案，冇就用 CDN -->
+<script src="three.min.js"></script>
+<script>
+if (!window.THREE) {
+  document.write('<script src="https://unpkg.com/three@0.132.2/build/three.min.js"><\/script>');
+}
+</script>
+<script src="lib/GLTFLoader.js"></script>
+<script src="ranger_glb.js"></script>
+<script>
+"use strict";
+
+/* ============================================================
+   1. 題庫
+   ============================================================ */
+var SAMPLE = [
+  { q: "一盒球共有200個，其中白球佔15%。這盒球中有白球多少個？",
+    options: ["45個", "15個", "30個", "20個"], answer: 2, sol: "200 × 15% = 200 × 0.15 = 30（個）" },
+  { q: "一件外套以「七五折」出售，售價是原價的百分之幾？",
+    options: ["25%", "75%", "70%", "7.5%"], answer: 1, sol: "七五折即付原價的 75%（七成半）" },
+  { q: "桌上有40顆朱古力，其中20顆是黑朱古力。黑朱古力佔全部的百分之幾？",
+    options: ["25%", "40%", "50%", "20%"], answer: 2, sol: "20 ÷ 40 = 0.5 = 50%" },
+  { q: "0.4 × 0.25 = ？",
+    options: ["0.1", "1", "0.01", "0.65"], answer: 0, sol: "0.4 × 0.25 = 0.4 × 1/4 = 0.1" },
+  { q: "地球上面積最大、最深的海洋是甚麼？",
+    options: ["大西洋", "太平洋", "印度洋", "北冰洋"], answer: 1, sol: "太平洋面積約1.65億平方公里，亦含最深的海溝（馬里亞納海溝）" },
+  { q: "下列哪一項不是地球自轉產生的自然現象？",
+    options: ["晝夜交替", "日月星辰東升西落", "四季變化", "時差"], answer: 2, sol: "四季變化由地球公轉及地軸傾斜造成，唔係自轉" }
+];
+
+var CSV_TPL =
+"題目,A,B,C,D,答案,解析\n" +
+"一盒球共有200個，其中白球佔15%。這盒球中有白球多少個？,45個,15個,30個,20個,C,200 × 15% = 30（個）\n" +
+"一件外套以「七五折」出售，售價是原價的百分之幾？,25%,75%,70%,7.5%,B,七五折即付原價的 75%\n" +
+"桌上有40顆朱古力，其中20顆是黑朱古力。黑朱古力佔全部的百分之幾？,25%,40%,50%,20%,C,20 ÷ 40 = 50%\n" +
+"0.4 × 0.25 = ？,0.1,1,0.01,0.65,A,0.4 × 1/4 = 0.1\n" +
+"地球上面積最大、最深的海洋是甚麼？,大西洋,太平洋,印度洋,北冰洋,B,太平洋最大亦最深\n" +
+"下列哪一項不是地球自轉產生的自然現象？,晝夜交替,日月星辰東升西落,四季變化,時差,C,四季由公轉及地軸傾斜造成\n";
+
+function csvRows(text) {
+  text = String(text).replace(/^\uFEFF/, "");
+  var rows = [], row = [], cell = "", inQ = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else { inQ = false; } }
+      else { cell += c; }
+    } else if (c === '"') { inQ = true; }
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n") { row.push(cell); cell = ""; rows.push(row); row = []; }
+    else if (c !== "\r") { cell += c; }
+  }
+  row.push(cell); rows.push(row);
+  return rows;
+}
+
+var TPL_XLSX = "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";
+var csvStats = { rows: 0, ok: 0, bad: [] };
+function fwch(s) { // 全形英文字母 → 半形
+  return String(s || "").replace(/[\uFF21-\uFF3A\uFF41-\uFF5A]/g, function (c) {
+    return String.fromCharCode(c.charCodeAt(0) - 0xFEE0);
+  });
+}
+function badNote() {
+  if (!csvStats.bad.length) return "";
+  var b = csvStats.bad.slice(0, 4).map(function (x) { return "第 " + x.row + " 列 " + x.why; });
+  return "<br><span style=\"color:#b4541f;font-weight:700\">⚠️ 有 " + csvStats.bad.length + " 列被跳過：" +
+    b.join("；") + (csvStats.bad.length > 4 ? "…" : "") + "</span>";
+}
+function parseCSV(text) {
+  var rows = csvRows(text);
+  var out = [];
+  csvStats = { rows: rows.length, ok: 0, bad: [] };
+  for (var r = 0; r < rows.length; r++) {
+    var rr = rows[r];
+    var allBlank = true;
+    for (var k = 0; k < rr.length; k++) { if (rr[k].trim() !== "") { allBlank = false; break; } }
+    if (allBlank) continue;                                  // 全空行：唔當錯
+    var A = fwch(rr[0]).trim();
+    if (/^(題目|問題|question)$/i.test(A)) continue;          // 表頭行：自動跳過
+    if (r === 0 && /^(答案|答案欄|ans|answer|正確答案)$/i.test(fwch(rr[5]).trim())) continue; // 英文/自訂表頭
+    var opts = [1, 2, 3, 4].map(function (i) { return fwch(rr[i]).trim(); });
+    var rawA = fwch(rr[5]).trim().toUpperCase();
+    var idx = rawA.length === 1 ? "ABCD".indexOf(rawA) : -1;
+    if (idx < 0 && /^[1-4]$/.test(rawA)) idx = parseInt(rawA, 10) - 1;
+    if (idx < 0) { // 容許直接填選項文字
+      for (var j = 0; j < 4; j++) { if (opts[j] === fwch(rr[5]).trim()) { idx = j; break; } }
+    }
+    var why = "";
+    if (!A) why = "題目空白";
+    else if (opts.some(function (v) { return !v; })) why = "A–D 選項未填滿";
+    else if (idx < 0 || idx > 3) why = "答案欄不是 A/B/C/D（或 1–4）";
+    if (why) { csvStats.bad.push({ row: r + 1, why: why }); continue; }
+    out.push({ q: A, options: opts, answer: idx, sol: (rr[6] || "").trim() });
+  }
+  csvStats.ok = out.length;
+  return out;
+}
+
+/* ============================================================
+   1b. Google 試算表題庫：老師貼 ID → 讀「目錄」→ 分享連結給學生
+   ============================================================ */
+var SHEET_KEY = "aq.sheetId";
+var sheetBank = null;          // 已載入的題目
+var STUDENT_MODE = false;      // true = 由分享連結進入
+
+function sheetIdOf(s) {
+  s = String(s || "").trim();
+  var m = s.match(/\/d\/([a-zA-Z0-9_-]{20,})/);
+  if (m) return m[1];
+  if (/^[a-zA-Z0-9_-]{20,}$/.test(s)) return s;
+  return "";
+}
+function gvizUrl(id) {
+  return "https://docs.google.com/spreadsheets/d/" + id + "/gviz/tq?tqx=out:csv";
+}
+/* 直接用 file:// 開檔時 fetch 會被瀏覽器擋（CORS）；改用 <script> 讀同一個 gviz，不受 CORS 限制 */
+var GV_CB = "__aqGviz";
+function gvizJsonp(id) {
+  return new Promise(function (resolve, reject) {
+    var s = document.createElement("script"), done = false;
+    var to = setTimeout(function () { finish(new Error("gviz timeout")); }, 9000);
+    function finish(err, rows) {
+      if (done) return;
+      done = true;
+      clearTimeout(to);
+      try { delete window[GV_CB]; } catch (e) { window[GV_CB] = undefined; }
+      if (s.parentNode) s.parentNode.removeChild(s);
+      if (err) reject(err); else resolve(rows);
+    }
+    window[GV_CB] = function (resp) {
+      if (!resp || !resp.table || !resp.table.rows) return finish(new Error("EMPTY"));
+      finish(null, resp.table.rows.map(function (r) {
+        return (r.c || []).map(function (c) {
+          if (!c) return "";
+          return c.f != null ? String(c.f) : (c.v != null ? String(c.v) : "");
+        });
+      }));
+    };
+    s.onerror = function () { finish(new Error("gviz script load failed")); };
+    s.src = "https://docs.google.com/spreadsheets/d/" + id + "/gviz/tq?tqx=responseHandler:" + GV_CB + "&_=" + Date.now();
+    document.head.appendChild(s);
+  });
+}
+function rowsToCsv(rows) {
+  return rows.map(function (r) {
+    return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(",");
+  }).join("\n");
+}
+function fetchText(url) {
+  return fetch(url, { cache: "no-store" }).then(function (r) {
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.text();
+  });
+}
+var CAT_SKIP = /^(課題|題目|工作表|名稱|目錄|備註|說明|科目|topic|sheet)\s*$/i;
+
+function bankKey(id) { return "aq.bank." + id; }
+function cachedBank(id) {
+  try { var s = localStorage.getItem(bankKey(id)); return s ? JSON.parse(s) : null; }
+  catch (e) { return null; }
+}
+function loadBank(id) {
+  return fetchText(gvizUrl(id))
+    .then(function (txt) { return parseCSV(txt); })
+    .catch(function (first) {
+      return gvizJsonp(id).then(function (rows) {
+        var list = parseCSV(rowsToCsv(rows));
+        if (!list.length) throw new Error("EMPTY");
+        return list;
+      }).catch(function () { throw first; });
+    })
+    .then(function (list) {
+      if (list.length) { try { localStorage.setItem(bankKey(id), JSON.stringify(list)); } catch (e) {} }
+      return list;
+    });
+}
+function errText(e) {
+  var m = (e && e.message) ? e.message : String(e);
+  if (/EMPTY/.test(m)) return "試算表第一張工作表沒有題目";
+  if (/HTTP 40[0-9]/.test(m)) return "讀不到：請確認已設「知道連結的任何人 → 檢視者」";
+  if (/Failed to fetch|NetworkError|Load failed|CORS/i.test(m)) return "連不到網或權限不足";
+  return m;
+}
+function setMsg(node, cls, html) {
+  if (!node) return;
+  node.className = "gmsg" + (cls ? " " + cls : "");
+  node.innerHTML = html || "";
+}
+function shareURL(id) {
+  var u = location.href.split("?")[0].split("#")[0];
+  var s = u + "?s=" + encodeURIComponent(id);
+  if (LB && LB.url) s += "&lb=" + encodeURIComponent(LB.url) + "&c=" + encodeURIComponent(LB.cls || "");
+  return s;
+}
+function refreshShare(id) {
+  var box = document.getElementById("shareBox");
+  if (!id) { box.hidden = true; return; }
+  var link = shareURL(id);
+  box.hidden = false;
+  document.getElementById("shareLink").textContent = link;
+  document.getElementById("shareQR").src =
+    "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + encodeURIComponent(link);
+}
+
+/* ===== 班級排行榜（可選，用 Google Apps Script 做後端） ===== */
+var LB = { url: "", cls: "" };
+function lbLoad() {
+  try { var s = JSON.parse(localStorage.getItem("aq.lb") || "null"); if (s) { LB.url = s.url || ""; LB.cls = s.cls || ""; } } catch (e) {}
+  var q = new URLSearchParams(location.search);
+  if (q.get("lb")) { LB.url = q.get("lb"); LB.cls = q.get("c") || ""; }
+  var u = document.getElementById("lbUrl"), c = document.getElementById("lbCls");
+  if (u) u.value = LB.url;
+  if (c) c.value = LB.cls;
+}
+function lbSave() {
+  var u = document.getElementById("lbUrl"), c = document.getElementById("lbCls");
+  LB.url = u ? u.value.trim() : LB.url;
+  LB.cls = c ? c.value.trim() : LB.cls;
+  try { localStorage.setItem("aq.lb", JSON.stringify(LB)); } catch (e) {}
+  var sid = sheetIdOf(document.getElementById("sheetId").value);
+  if (sid) refreshShare(sid);
+}
+function lbTop() {
+  if (!LB.url) return Promise.resolve(null);
+  var u = LB.url + (LB.url.indexOf("?") < 0 ? "?" : "&") + "class=" + encodeURIComponent(LB.cls || "");
+  return fetch(u).then(function (r) { return r.json(); }).catch(function () { return null; });
+}
+function lbPost(rec) {
+  if (!LB.url) return Promise.resolve(null);
+  return fetch(LB.url, {
+    method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(rec)
+  }).catch(function () { return null; });
+}
+function lbRender(list, me) {
+  var box = document.getElementById("lbBox"), ol = document.getElementById("lbList");
+  if (!box || !ol) return;
+  if (!list || !list.length) { box.hidden = true; return; }
+  ol.innerHTML = "";
+  list.slice(0, 10).forEach(function (r, i) {
+    var li = document.createElement("li");
+    var isMe = me && r.name === me.name && (r.cls || "") === (me.cls || "");
+    if (isMe) li.className = "me";
+    li.innerHTML = "<span class=\"rk\">" + (i + 1) + "</span>" +
+      "<span class=\"nm\">" + r.name + (isMe ? "（你）" : "") + "</span>" +
+      "<span class=\"sc\">" + r.score + "/" + r.total + "</span>" +
+      "<span class=\"tm\">" + fmtTime(r.time) + "</span>";
+    ol.appendChild(li);
+  });
+  box.hidden = false;
+}
+function lbAfterQuiz() {
+  if (!LB.url || !state.student) return;
+  var me = { name: state.student, cls: LB.cls || "" };
+  document.getElementById("lbBox").hidden = true;
+  lbPost({ cls: LB.cls || "", name: state.student, score: state.correct, total: state.list.length, time: Math.round(seconds) })
+    .then(function () { return lbTop(); })
+    .then(function (list) { lbRender(list, me); });
+}
+
+function readSheet() {
+  var inp = document.getElementById("sheetId");
+  var msg = document.getElementById("sheetMsg");
+  var id = sheetIdOf(inp.value);
+  if (!id) { setMsg(msg, "err", "❌ 認不得 ID。請貼完整網址，或 <code>/d/</code> 與 <code>/edit</code> 之間那串。"); return; }
+  setMsg(msg, "run", "⏳ 讀取中…");
+  loadBank(id).then(function (list) {
+    if (!list.length) throw new Error("EMPTY");
+    try { localStorage.setItem(SHEET_KEY, id); } catch (e) {}
+    document.getElementById("topicRow").hidden = false;
+    setMsg(msg, "ok", "✅ 已讀到 " + list.length + " 題（已存到這部機，斷網都玩得）" + badNote());
+    refreshShare(id);
+  }).catch(function (e) {
+    document.getElementById("topicRow").hidden = true;
+    document.getElementById("shareBox").hidden = true;
+    setMsg(msg, "err", "❌ 讀不到題庫。<br>① 試算表未開放：共用 → 知道連結的任何人 → 檢視者　② <b>第一張工作表</b>沒有題目（欄位要是 題目/A/B/C/D/答案）　③ ID 貼錯了" + badNote() + "<br><span style=\"font-weight:600\">技術訊息：" + errText(e) + "</span>");
+  });
+}
+
+/* ============================================================
+   2. 音效（WebAudio，無外部檔案）
+   ============================================================ */
+var soundOn = false, actx = null;   // 預設靜音：一班 30 部 iPad 同時開聲會失控
+function beep(freqs, dur, type) {
+  if (!soundOn) return;
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    var t0 = actx.currentTime;
+    freqs.forEach(function (f, i) {
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || "triangle";
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0 + i * dur);
+      g.gain.exponentialRampToValueAtTime(0.22, t0 + i * dur + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * dur + dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t0 + i * dur); o.stop(t0 + i * dur + dur + 0.02);
+    });
+  } catch (e) { /* 靜音環境就算 */ }
+}
+
+// 拉弓音：弓臂木頭轉動的吱唧 + 弦漸緊（音高隨拉弦上升），放弦即停
+var drawSnd = null;
+function startDraw() {
+  if (!soundOn || drawSnd) return;
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    var len = Math.floor(actx.sampleRate * 1.5);
+    var buf = actx.createBuffer(1, len, actx.sampleRate);
+    var ch = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
+    var src = actx.createBufferSource(); src.buffer = buf; src.loop = true;
+    var bp = actx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 7;
+    var g = actx.createGain(); g.gain.value = 0.0001;
+    var o = actx.createOscillator(), og = actx.createGain();
+    o.type = "sawtooth"; og.gain.value = 0.0001;
+    var t0 = actx.currentTime;
+    bp.frequency.setValueAtTime(480, t0);
+    bp.frequency.linearRampToValueAtTime(1400, t0 + 1.15);   // 弦越拉越緊，摩擦聲越高
+    g.gain.exponentialRampToValueAtTime(0.10, t0 + 0.16);
+    g.gain.linearRampToValueAtTime(0.20, t0 + 1.10);
+    o.frequency.setValueAtTime(58, t0);
+    o.frequency.linearRampToValueAtTime(104, t0 + 1.10);    // 弓臂彎曲的低頻呻吟
+    og.gain.linearRampToValueAtTime(0.05, t0 + 0.90);
+    src.connect(bp); bp.connect(g); g.connect(actx.destination);
+    o.connect(og); og.connect(actx.destination);
+    src.start(t0); o.start(t0);
+    drawSnd = { src: src, o: o, g: g, og: og };
+  } catch (e) { drawSnd = null; }
+}
+function stopDraw() {
+  if (!drawSnd) return;
+  try {
+    var t0 = actx.currentTime, n = drawSnd;
+    [n.g, n.og].forEach(function (gg) {
+      gg.gain.cancelScheduledValues(t0);
+      gg.gain.setValueAtTime(Math.max(0.0001, gg.gain.value), t0);
+      gg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06);
+    });
+    n.src.stop(t0 + 0.10); n.o.stop(t0 + 0.10);
+  } catch (e) { }
+  drawSnd = null;
+}
+
+/* ============================================================
+   3. 3D 場景
+   ============================================================ */
+var scene, camera, renderer, clock, raycaster;
+var targets = [], archer = null, GOLD = 0xd9b45b;
+var TARGET_SCALE = 1;
+var facingIndex = -1, aimPull = 0.12;   // 遊戲流程會寫入，保留相容
+
+var TARGET_Z = -12, TARGET_Y = 2.30, TARGET_R = 1.55;
+var ROW_OFF = 7.4, ROW_GAP = 5.2;
+var ARCHER_X = -2.3, ARCHER_Z = 6.5;
+
+var CAM_BASE = new THREE.Vector3(-1.75, 1.88, 16.4);
+var quizT0 = 0, seconds = 0;
+function fmtTime(s) { var m = Math.floor(s / 60), r = s % 60; return m + ":" + (r < 10 ? "0" : "") + r; }
+var CAM_LOOK = new THREE.Vector3(0.0, 1.30, -2.5);
+var HFOV = 70 * Math.PI / 180;   // 固定水平視角，橫豎機種構圖一致
+var HFOV_WIDE = 84 * Math.PI / 180;  // 拉弓特寫：斜後方，角色與四個靶同時入鏡
+var FOV_BASE = 45, FOV_WIDE = 70;
+var CAM_SIDE = 1.05;             // 機位側偏距離（m）：0 = 正後方；1.05m / 6.4m ≈ 9°，弓臂與弦露出身體外但不會擠走靶
+var CAM_SWAY = false;            // 後備方案：改 true = 只在拉弓時才側移（平時正後方）
+var VIEW_FP = 0;                 // 0 = 第三人稱（預設），1 = 第一人稱
+
+function setViewFp(on) {
+  VIEW_FP = on ? 1 : 0;
+  if (RIG.root) RIG.root.visible = !VIEW_FP;   // 第一人稱隱藏角色：鏡頭就在頭骨位置，本體會佔據整個畫面
+  if (BOW.grp && !VIEW_FP) BOW.grp.scale.setScalar(BOW_SCALE);
+  var b = document.getElementById('btnView');
+  if (b) b.textContent = VIEW_FP ? '👁 第一身' : '🎥 第三身';
+  // 第一人稱時弧線點縮小，否則貼近鏡頭的球會大如月餅
+  if (typeof trajPts !== 'undefined' && trajPts.children) {
+    var s = VIEW_FP ? 0.26 : 1;
+    trajPts.children.forEach(function (c) { c.scale.setScalar(s); });
+  }
+}
+document.getElementById('btnView').addEventListener('click', function () { setViewFp(!VIEW_FP); });
+
+function makeLabelSprite(text, opt) {
+  opt = opt || {};
+  var fs = opt.font || 72, padX = 26, padY = 14;
+  var font = 'bold ' + fs + 'px "PingFang HK","Microsoft JhengHei","Noto Sans TC",sans-serif';
+  var meas = document.createElement("canvas").getContext("2d");
+  meas.font = font;
+  var tw = Math.ceil(meas.measureText(text).width) || fs;
+  var w = tw + padX * 2, h = fs + padY * 2;
+
+  var c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  var g = c.getContext("2d");
+  if (opt.bg !== false) {
+    var r = Math.min(24, h / 2);
+    g.fillStyle = opt.bgColor || "rgba(43,29,16,.88)";
+    g.beginPath();
+    g.moveTo(r, 0); g.lineTo(w - r, 0); g.quadraticCurveTo(w, 0, w, r);
+    g.lineTo(w, h - r); g.quadraticCurveTo(w, h, w - r, h);
+    g.lineTo(r, h); g.quadraticCurveTo(0, h, 0, h - r);
+    g.lineTo(0, r); g.quadraticCurveTo(0, 0, r, 0);
+    g.closePath(); g.fill();
+  }
+  g.font = font; g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillStyle = opt.color || "#fff6dd";
+  g.fillText(text, w / 2, h / 2 + fs * 0.03);
+
+  var tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  var maxH = opt.maxH || 0.72, maxW = opt.maxW || 2.95;
+  var hh = Math.min(maxH, maxW * h / w);
+  var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false }));
+  sp.renderOrder = 20;   // 選項文字永遠壓在最上：木柵欄、靶板都遮不到
+  sp.scale.set(hh * w / h, hh, 1);
+  return sp;
+}
+
+function paperTex(size, seed) {
+  // 靶面紙質：纖維斑點 + 箭孔（正的孔、擦傷、淺色邊緣）— 讓靶有「被射過」的痕跡
+  var c = document.createElement("canvas"); c.width = c.height = size;
+  var g = c.getContext("2d");
+  var rnd = (function (s) { return function () { s = (s * 16807) % 2147483647; return s / 2147483647; }; })(seed || 7);
+  for (var i = 0; i < 900; i++) {
+    g.fillStyle = "rgba(" + (rnd() < 0.5 ? "255,255,255" : "0,0,0") + "," + (0.05 + rnd() * 0.09).toFixed(2) + ")";
+    var r = 0.5 + rnd() * 1.6;
+    g.beginPath(); g.arc(rnd() * size, rnd() * size, r, 0, 6.2832); g.fill();
+  }
+  var t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t;
+}
+
+function makeTarget(letter) {
+  var grp = new THREE.Group();
+  var B = TARGET_R;
+
+  // 真實 World Archery 靶面（只畫到黑環）：8 等份環，X 環為最內半環
+  // 環半徑（×B）：3=1.000 4=0.875 5=0.750 6=0.625 7=0.500 8=0.375 9=0.250 10=0.125 X=0.0625
+  var COL = { black: 0xf6efdd, blue: 0x5aa8d8, red: 0xd6473a, gold: 0xf2c94c, line: 0xfdf7ea };
+  var rings = [];
+  function disc3(r, c, z) {
+    var m = new THREE.Mesh(new THREE.CircleGeometry(B * r, 44),
+      new THREE.MeshLambertMaterial({ color: c }));
+    m.position.z = z; grp.add(m); rings.push(m); return m;
+  }
+  function line3(r, z) {
+    var m = new THREE.Mesh(new THREE.RingGeometry(B * (r - 0.0045), B * (r + 0.0045), 44),
+      new THREE.MeshBasicMaterial({ color: COL.line }));
+    m.position.z = z; grp.add(m);
+  }
+
+  var disc = disc3(1.000, COL.black, 0);        // 黑 3、4（外框，亦做答題高亮）
+  line3(1.000, 0.004);                          // 靶面外邊
+  line3(0.875, 0.004);                          // 3／4 分界
+  disc3(0.750, COL.blue, 0.008);                // 藍 5、6
+  line3(0.625, 0.012);
+  disc3(0.500, COL.red, 0.016);                 // 紅 7、8
+  line3(0.375, 0.020);
+  var ring2 = disc3(0.250, COL.gold, 0.024);    // 金 9、10（答題高亮用）
+  line3(0.125, 0.028);                          // 9／10 分界
+  line3(0.0625, 0.032);                         // X 環
+
+  // 紙纖維 + 箭孔：疊在最上層，令靶面不再像純色塑膠
+  var paper = new THREE.Mesh(new THREE.CircleGeometry(B * 1.0, 44),
+    new THREE.MeshBasicMaterial({ map: paperTex(320, (letter || "A").charCodeAt(0) * 37), transparent: true, depthWrite: false, opacity: 0.95 }));
+  paper.position.z = 0.036; grp.add(paper);
+
+  // 接地陰影（日光投影之外，補上靶座腳下的接觸暗部）
+  var cs = contactShadow(B * 1.05, 0.34);
+  cs.position.y = -TARGET_Y + 0.012; grp.add(cs);
+
+  // 草蓆靶身
+  var straw = new THREE.Mesh(new THREE.CylinderGeometry(B, B, 0.30, 30),
+    new THREE.MeshLambertMaterial({ color: 0xd8c48f }));
+  straw.rotation.x = Math.PI / 2;
+  straw.position.z = -0.17; grp.add(straw);
+
+  // 木架
+  var postMat = new THREE.MeshLambertMaterial({ color: 0x8b6239 });
+  [-1, 1].forEach(function (s) {
+    var leg = new THREE.Mesh(new THREE.BoxGeometry(0.13, TARGET_Y + 0.7, 0.13), postMat);
+    leg.position.set(s * B * 0.62, -(TARGET_Y + 0.7) / 2 + 0.05, -0.34);
+    leg.rotation.z = s * 0.07;
+    leg.castShadow = true;
+    grp.add(leg);
+  });
+  var bar = new THREE.Mesh(new THREE.BoxGeometry(B * 1.5, 0.12, 0.12), postMat);
+  bar.position.set(0, -B * 0.75, -0.34); grp.add(bar);
+
+  grp.position.set(0, TARGET_Y, TARGET_Z);
+  scene.add(grp);
+
+  // 靶座鉸鏈：繞靶底（地面）轉 → 整塊靶可以升起／躺平
+  var hinge = new THREE.Group();
+  hinge.position.set(0, -TARGET_Y, 0);
+  grp.add(hinge);
+  var kids = grp.children.slice();
+  for (var ki = 0; ki < kids.length; ki++) {
+    var kc = kids[ki];
+    if (kc === hinge) continue;
+    grp.remove(kc);
+    kc.position.y += TARGET_Y;
+    hinge.add(kc);
+  }
+
+  var t = { group: grp, hinge: hinge, disc: disc, ring2: ring2, letter: letter, rings: rings,
+            label: null, lsp: null, hit: 0, baseY: TARGET_Y,
+            rise: 0, riseT: 0, riseDelay: 0 };
+  disc.userData.target = t;
+  return t;
+}
+
+function addHouse(x, z, w, h, d, bodyColor, roofColor) {
+  var body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshLambertMaterial({ color: bodyColor }));
+  body.position.set(x, h / 2, z);
+  body.castShadow = true; body.receiveShadow = true;
+  scene.add(body);
+
+  var roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.86, h * 0.6, 4),
+    new THREE.MeshLambertMaterial({ color: roofColor }));
+  roof.position.set(x, h + h * 0.3, z);
+  roof.rotation.y = Math.PI / 4;
+  roof.castShadow = true;
+  scene.add(roof);
+
+  var win = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.3, h * 0.24),
+    new THREE.MeshLambertMaterial({ color: 0xfff2c9 }));
+  win.position.set(x, h * 0.58, z + d / 2 + 0.02);
+  scene.add(win);
+}
+
+function addTree(x, z, s) {
+  var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16 * s, 0.22 * s, 1.7 * s, 6),
+    new THREE.MeshLambertMaterial({ color: 0x7a4f26 }));
+  trunk.position.set(x, 0.85 * s, z);
+  trunk.castShadow = true;
+  scene.add(trunk);
+
+  for (var i = 0; i < 3; i++) {
+    var leaf = new THREE.Mesh(new THREE.IcosahedronGeometry((0.95 - i * 0.2) * s, 0),
+      new THREE.MeshLambertMaterial({ color: i % 2 ? 0x4f9a4a : 0x63b158, flatShading: true }));
+    leaf.position.set(x + (i - 1) * 0.3 * s, (1.7 + i * 0.55) * s, z + (i % 2) * 0.2 * s);
+    leaf.castShadow = true;
+    scene.add(leaf);
+  }
+}
+
+// ── 程序生成貼圖（無外部檔，靠 canvas 即時畫）────────────────
+function grainTex(size, dots, blob) {
+  var c = document.createElement("canvas"); c.width = c.height = size;
+  var x = c.getContext("2d");
+  x.fillStyle = "#fff"; x.fillRect(0, 0, size, size);
+  for (var i = 0; i < dots; i++) {
+    var v = 118 + ((Math.random() * 137) | 0);
+    x.fillStyle = "rgba(" + v + "," + v + "," + v + "," + (0.16 + Math.random() * 0.40).toFixed(2) + ")";
+    var s = 1 + Math.random() * 2.2;
+    x.fillRect(Math.random() * size, Math.random() * size, s, s);
+  }
+  if (blob) for (var b = 0; b < 9; b++) {
+    var cx = Math.random() * size, cy = Math.random() * size, r = size * (0.10 + Math.random() * 0.17);
+    var g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+    var dl = Math.random() < 0.5 ? "255,255,255" : "170,170,170";
+    g.addColorStop(0, "rgba(" + dl + ",0.16)"); g.addColorStop(1, "rgba(" + dl + ",0)");
+    x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 6.2832); x.fill();
+  }
+  var t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = 4;
+  return t;
+}
+
+// 透明底、深色斑點 → 疊在靶面做紙纖維質感
+function speckTex(size, dots) {
+  var c = document.createElement("canvas"); c.width = c.height = size;
+  var x = c.getContext("2d");
+  for (var i = 0; i < dots; i++) {
+    var a = 0.05 + Math.random() * 0.16;
+    x.fillStyle = "rgba(90,78,58," + a.toFixed(2) + ")";
+    x.fillRect(Math.random() * size, Math.random() * size, 1 + Math.random() * 1.6, 1 + Math.random() * 1.6);
+  }
+  var t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.encoding = THREE.sRGBEncoding;
+  return t;
+}
+
+// 接地陰影：物件腳下的徑向漸變貼片（日光陰影之外的第二層）
+function contactShadow(r, op) {
+  var c = document.createElement("canvas"); c.width = c.height = 128;
+  var g = c.getContext("2d");
+  var rg = g.createRadialGradient(64, 64, 2, 64, 64, 63);
+  rg.addColorStop(0, "rgba(0,0,0," + op + ")");
+  rg.addColorStop(0.45, "rgba(0,0,0," + (op * 0.6).toFixed(2) + ")");
+  rg.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = rg; g.fillRect(0, 0, 128, 128);
+  var t = new THREE.CanvasTexture(c);
+  var m = new THREE.Mesh(new THREE.PlaneGeometry(r * 2, r * 2),
+    new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2;
+  m.renderOrder = 2;
+  return m;
+}
+
+function buildRange() {
+  var ground = new THREE.Mesh(new THREE.PlaneGeometry(150, 190),
+    new THREE.MeshLambertMaterial({ color: 0x5e8f4a, map: (function () { var t = grainTex(256, 2400, false); t.repeat.set(96, 120); return t; })() }));
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.set(0, 0, -30);
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  // 射道：修剪成淺色的草徑（不是泥地），兩側白線
+  var lane = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 26),
+    new THREE.MeshLambertMaterial({ color: 0x78ac5c, map: (function () { var t = grainTex(256, 900, false); t.repeat.set(9, 40); return t; })() }));
+  lane.rotation.x = -Math.PI / 2;
+  lane.position.set(2.2, 0.01, -4);
+  lane.receiveShadow = true;
+  scene.add(lane);
+  [-2.8, 2.8].forEach(function (sx) {
+    var edge = new THREE.Mesh(new THREE.PlaneGeometry(0.10, 26),
+      new THREE.MeshLambertMaterial({ color: 0xe9f1dd }));
+    edge.rotation.x = -Math.PI / 2;
+    edge.position.set(2.2 + sx, 0.014, -4);
+    scene.add(edge);
+  });
+
+  // 射箭線
+  var line = new THREE.Mesh(new THREE.PlaneGeometry(16, 0.28),
+    new THREE.MeshLambertMaterial({ color: 0xf3ead1 }));
+  line.rotation.x = -Math.PI / 2;
+  line.position.set(2.2, 0.02, 5.6);
+  scene.add(line);
+
+  // 剪草條紋已移除：紋理＋色調映射已提供層次，硬邊條帶反而露破綻
+
+  // 靶後擋箭網（深綠網 + 淺色柱）：放在 ALL 靶更後面，否則會切穿斜排的靶
+  var NET_Z = TARGET_Z - 8.5;
+  var netMat = new THREE.MeshLambertMaterial({ color: 0x2c4a34, side: THREE.DoubleSide });
+  var net = new THREE.Mesh(new THREE.PlaneGeometry(34, 3.4), netMat);
+  net.position.set(6, 1.7, NET_Z);
+  scene.add(net);
+  var postMat = new THREE.MeshLambertMaterial({ color: 0xe8e2d2 });
+  for (var i = -7; i <= 7; i++) {
+    var p = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 3.6, 8), postMat);
+    p.position.set(6 + i * 2.4, 1.8, NET_Z);
+    p.castShadow = true;
+    scene.add(p);
+  }
+  // 擋箭草包：已移除（在低視角下看起來像漂浮的木柱）
+  // 網頂小旗（豐富背景層次）
+  var flagCols = [0xd6473a, 0xf2c94c, 0x5aa8d8, 0xffffff];
+  for (var fi = 0; fi < 4; fi++) {
+    var fxp = 6 + (fi - 1.5) * 6.4;
+    var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 3.2, 6), postMat);
+    pole.position.set(fxp, 1.6, NET_Z + 0.1);
+    scene.add(pole);
+    var flag = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.48),
+      new THREE.MeshLambertMaterial({ color: flagCols[fi], side: THREE.DoubleSide }));
+    flag.position.set(fxp + 0.44, 3.1, NET_Z + 0.1);
+    scene.add(flag);
+  }
+
+  // ---- 奧運射箭場 ----
+  // 看台：階梯式白色座席 + 彩衣觀眾
+  function addStand(cx, cz, w, rot) {
+    var g = new THREE.Group();
+    g.position.set(cx, 0, cz);
+    g.rotation.y = rot || 0;
+    scene.add(g);
+    var COLS = [0xd94f4f, 0x3f7fc4, 0xe8b83a, 0x4fa86a, 0xf2f4f6, 0x8a5fb0];
+    for (var s = 0; s < 4; s++) {
+      var h = 0.7 + s * 0.72;
+      var step = new THREE.Mesh(new THREE.BoxGeometry(w, h, 1.6),
+        new THREE.MeshLambertMaterial({ color: s % 2 ? 0xe9eef2 : 0xf7f9fb }));
+      step.position.set(0, h / 2, -s * 1.6);
+      step.receiveShadow = true;
+      g.add(step);
+      for (var i = 0; i < Math.floor(w / 1.7); i++) {
+        if (Math.random() < 0.38) continue;
+        var ppl = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.52, 0.36),
+          new THREE.MeshLambertMaterial({ color: COLS[Math.floor(Math.random() * COLS.length)] }));
+        ppl.position.set(-w / 2 + 0.9 + i * 1.7, h + 0.26, -s * 1.6 + 0.25);
+        g.add(ppl);
+      }
+    }
+    return g;
+  }
+  addStand(4, -46, 40, 0);                 // 靶後主看台
+  addStand(-30, -20, 30, Math.PI / 2);     // 左側看台
+  addStand(36, -20, 30, -Math.PI / 2);     // 右側看台
+
+  // 旗桿＋三角旗（不用奧運五環：受 IOC 保護）
+  var whiteMat = new THREE.MeshLambertMaterial({ color: 0xf2f4f6 });
+  var FLAG = [0x2f6fb5, 0xe8b83a, 0xd94f4f, 0x4fa86a];
+  for (var f = 0; f < 8; f++) {
+    var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 7.6, 6), whiteMat);
+    pole.position.set(-16 + f * 5.8, 3.8, -43.5);
+    scene.add(pole);
+    var fg = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.05),
+      new THREE.MeshLambertMaterial({ color: FLAG[f % 4], side: THREE.DoubleSide }));
+    fg.position.set(-16 + f * 5.8 + 0.85, 6.9, -43.5);
+    scene.add(fg);
+  }
+
+  // 大螢幕記分板（架高在靶後，不跟靶重疊）
+  var board = new THREE.Mesh(new THREE.BoxGeometry(13, 4.4, 0.35),
+    new THREE.MeshLambertMaterial({ color: 0x16233a }));
+  board.position.set(4, 10.6, -50);
+  scene.add(board);
+  var frame = new THREE.Mesh(new THREE.BoxGeometry(13.8, 5.1, 0.2),
+    new THREE.MeshLambertMaterial({ color: 0xe8b83a }));
+  frame.position.set(4, 10.6, -50.3);
+  scene.add(frame);
+  [-1, 1].forEach(function (s) {
+    var leg = new THREE.Mesh(new THREE.BoxGeometry(0.3, 10.6, 0.3), whiteMat);
+    leg.position.set(4 + s * 5.2, 5.3, -50.15);
+    scene.add(leg);
+  });
+
+  // 剪草條紋（深淺相間，像正式射箭場）
+  for (var mz = 0; mz < 7; mz++) {
+    var strip = new THREE.Mesh(new THREE.PlaneGeometry(150, 5.6),
+      new THREE.MeshLambertMaterial({ color: mz % 2 ? 0x86c25e : 0x7cb854 }));
+    strip.rotation.x = -Math.PI / 2;
+    strip.position.set(0, 0.004, -46 + mz * 11.2);
+    scene.add(strip);
+  }
+
+  addTree(-24, -6, 1.25);
+  addTree(30, -4, 1.2);
+  addTree(-27, -30, 1.3);
+  // （舊的白球雲已移除，改用上方 sprite 雲）
+
+  // 高空雲：程序生成的軟邊雲貼圖（billboard），比堆白球自然
+  (function clouds() {
+    var cvs = document.createElement("canvas"); cvs.width = 256; cvs.height = 128;
+    var g2 = cvs.getContext("2d");
+    function puff(x, y, r, a) {
+      var rad = g2.createRadialGradient(x, y, 0, x, y, r);
+      rad.addColorStop(0, "rgba(255,255,255," + a + ")");
+      rad.addColorStop(0.55, "rgba(252,253,255," + (a * 0.5).toFixed(2) + ")");
+      rad.addColorStop(1, "rgba(255,255,255,0)");
+      g2.fillStyle = rad; g2.beginPath(); g2.arc(x, y, r, 0, 6.2832); g2.fill();
+    }
+    puff(72, 82, 50, 0.95); puff(124, 68, 60, 0.9); puff(178, 80, 48, 0.9);
+    puff(98, 92, 42, 0.8); puff(152, 94, 44, 0.8); puff(210, 96, 26, 0.6);
+    var tex = new THREE.CanvasTexture(cvs); tex.encoding = THREE.sRGBEncoding;
+    for (var c = 0; c < 6; c++) {
+      var sp = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: tex, transparent: true, depthWrite: false, fog: false,
+        opacity: 0.9 - (c % 3) * 0.07
+      }));
+      sp.position.set(-78 + c * 31, 25 + (c % 3) * 5.5, -68 - (c % 4) * 15);
+      sp.scale.set(36 + (c % 3) * 9, 18 + (c % 3) * 4.5, 1);
+      scene.add(sp);
+    }
+  })();
+
+  // 遠景樹林：三層景深（後層矮而密、前層高而疏），比一排同一大小的尖錐自然
+  (function treeLine() {
+    var layers = [
+      { n: 150, z0: -58, z1: -96, xspan: 110, col: 0x3c6740, s0: 0.55, s1: 1.05, r: 1.7, h: 6.4 },
+      { n: 80, z0: -34, z1: -58, xspan: 100, col: 0x2f5533, s0: 0.85, s1: 1.55, r: 1.6, h: 6.0 },
+      { n: 26, z0: -10, z1: -34, xspan: 60, col: 0x355e37, s0: 1.1, s1: 1.9, r: 1.5, h: 5.6 }
+    ];
+    var dd = new THREE.Object3D();
+    layers.forEach(function (L, li) {
+      var im = new THREE.InstancedMesh(
+        new THREE.ConeGeometry(L.r, L.h, 6),
+        new THREE.MeshLambertMaterial({ color: L.col, flatShading: true }), L.n);
+      for (var i = 0; i < L.n; i++) {
+        var s = L.s0 + Math.random() * (L.s1 - L.s0);
+        var x = (Math.random() - 0.5) * 2 * L.xspan;
+        var z = L.z0 - Math.random() * (L.z1 - L.z0) * -1;
+        if (li === 2) {                    // 最前一層只放兩側，不可侵入射道
+          x = (Math.random() < 0.5 ? -1 : 1) * (32 + Math.random() * 34);
+        }
+        dd.position.set(x, L.h * 0.5 * s, z);
+        dd.scale.set(s, s * (0.9 + Math.random() * 0.5), s);
+        dd.rotation.y = Math.random() * 6.2832;
+        dd.updateMatrix(); im.setMatrixAt(i, dd.matrix);
+      }
+      im.instanceMatrix.needsUpdate = true;
+      im.frustumCulled = false;
+      scene.add(im);
+    });
+  })();
+
+  // 遠山
+  for (var m = 0; m < 7; m++) {
+    var hill = new THREE.Mesh(new THREE.ConeGeometry(16 + (m % 3) * 6, 12 + (m % 2) * 7, 5),
+      new THREE.MeshLambertMaterial({ color: 0x7fa86b, flatShading: true }));
+    hill.position.set(-55 + m * 20, 4, -78 - (m % 3) * 8);
+    hill.rotation.y = m;
+    scene.add(hill);
+  }
+}
+
+/* ============================================================
+   3b. 弓（真 recurve 幾何）+ 弦 + 箭
+   本地坐標：+Y 上、-Z 射向、+Z 弦側（朝射手）
+   ============================================================ */
+var BOW = {
+  grp: null, tipY: 0.65, brace: 0.100, pullMax: 0.42, nockX: -0.20,
+  sTop: null, sBot: null, arrow: null,
+  gripLocal: new THREE.Vector3(0, 0, 0),
+  nockLocal: new THREE.Vector3(0.09, 0, 0.115)
+};
+var ARROW_LEN = 0.72;
+
+function buildBow() {
+  var g = new THREE.Group();
+  var wood = new THREE.MeshLambertMaterial({ color: 0xcf9b58, flatShading: true });
+  var dark = new THREE.MeshLambertMaterial({ color: 0x2a1a0f, flatShading: true });
+  var leather = new THREE.MeshLambertMaterial({ color: 0xc9a06a, flatShading: true });
+
+  // 上下肢：弓身向射手微鼓（belly），末端反曲回到弦線
+  [-1, 1].forEach(function (sign) {
+    var pts = [
+      [0.000, 0.170, 0.000],
+      [0.000, 0.260, -0.035],
+      [0.000, 0.380, -0.060],
+      [0.000, 0.500, -0.030],
+      [0.000, 0.580, 0.040],
+      [0.000, 0.630, 0.090],
+      [0.000, 0.650, 0.100]
+    ].map(function (p) {
+      return new THREE.Vector3(p[0], p[1] * sign, p[2]);
+    });
+    if (sign < 0) pts.reverse();
+    var curve = new THREE.CatmullRomCurve3(pts);
+    var limb = new THREE.Mesh(new THREE.TubeGeometry(curve, 30, 0.055, 6, false), wood);
+    limb.scale.x = 1.0;          // 壓扁成弓臂
+    limb.castShadow = true;
+    g.add(limb);
+
+    // 弓棐
+    var tip = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), dark);
+    tip.scale.x = 1.0;
+    tip.position.set(0, 0.650 * sign, 0.100);
+    g.add(tip);
+  });
+
+  // 握把
+  var riser = new THREE.Mesh(new THREE.BoxGeometry(0.090, 0.40, 0.070), wood);
+  riser.position.set(0, 0, 0.012);
+  riser.castShadow = true;
+  g.add(riser);
+
+  var grip = new THREE.Mesh(new THREE.BoxGeometry(0.100, 0.185, 0.080), leather);
+  grip.position.set(0, -0.01, 0.020);
+  g.add(grip);
+
+  // 箭台（弦側、握把上方）
+  var rest = new THREE.Mesh(new THREE.BoxGeometry(0.030, 0.018, 0.030), dark);
+  rest.position.set(0, 0.055, 0.052);
+  g.add(rest);
+
+  // 弦：兩段圓柱，每格更新
+  var smat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  BOW.sTop = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1, 5), smat);
+  BOW.sBot = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1, 5), smat);
+  g.add(BOW.sTop); g.add(BOW.sBot);
+
+  // 箭
+  var ag = new THREE.Group();
+  var shaftMat = new THREE.MeshLambertMaterial({ color: 0xe7d8ac });
+  var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, ARROW_LEN, 6), shaftMat);
+  shaft.rotation.x = Math.PI / 2;
+  shaft.position.z = -ARROW_LEN / 2;
+  shaft.castShadow = true;
+  ag.add(shaft);
+
+  var point = new THREE.Mesh(new THREE.ConeGeometry(0.026, 0.11, 6),
+    new THREE.MeshLambertMaterial({ color: 0x8d9299 }));
+  point.rotation.x = -Math.PI / 2;
+  point.position.z = -ARROW_LEN - 0.03;
+  ag.add(point);
+
+  var fMat = [0xe0483b, 0xf2e6c8, 0xe0483b];
+  for (var i = 0; i < 3; i++) {
+    var holder = new THREE.Group();
+    holder.rotation.z = (i * Math.PI * 2) / 3;
+    var feather = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.062, 0.135),
+      new THREE.MeshLambertMaterial({ color: fMat[i], flatShading: true }));
+    feather.position.set(0, 0.034, -0.085);
+    holder.add(feather);
+    ag.add(holder);
+  }
+
+  var nock = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.028, 6), dark);
+  nock.rotation.x = Math.PI / 2;
+  nock.position.z = 0.008;
+  ag.add(nock);
+
+  BOW.arrow = ag;
+  g.add(ag);
+
+  // 真射手會斜持弓（cant）約 15°：令弓的弧面在鏡頭後方也看得見，同時不改變射擊方向
+  g.rotation.z = 0.26;
+
+  BOW.grp = g;
+  updateBow(0.12);
+  return g;
+}
+
+var _UP = new THREE.Vector3(0, 1, 0);
+function setSeg(mesh, a, b) {
+  var d = new THREE.Vector3().subVectors(b, a);
+  var L = d.length() || 0.0001;
+  mesh.position.copy(a).addScaledVector(d, 0.5);
+  mesh.scale.set(1, L, 1);
+  mesh.quaternion.setFromUnitVectors(_UP, d.normalize());
+}
+
+// 弓不自行計算位置：跟仕持弓手，弦頭跟仕拉弦手
+function updateBow() {
+  if (!BOW.grp || !RIG.ready) return;
+  var par = BOW.grp.parent;
+  var bh = RIG.bones.handr, lh = RIG.bones.handl;
+  if (!bh || !lh) return;
+
+  bh.getWorldPosition(_bw);
+  BOW.grp.position.copy(par.worldToLocal(_bw));
+  BOW.grp.updateWorldMatrix(true, false);
+
+  lh.getWorldPosition(_nw);
+  BOW.grp.worldToLocal(_nw);
+
+  var top = new THREE.Vector3(0, BOW.tipY, BOW.brace);
+  var bot = new THREE.Vector3(0, -BOW.tipY, BOW.brace);
+  setSeg(BOW.sTop, top, _nw);
+  setSeg(BOW.sBot, _nw, bot);
+
+  BOW.nockLocal.copy(_nw);
+  BOW.arrow.position.copy(_nw);
+  BOW.arrow.visible = true;
+}
+
+/* ============================================================
+   3c. 角色（KayKit Rogue，CC0）+ 兩節 IK
+   ============================================================ */
+var RIG = { ready: false, bones: {}, mixer: null, saved: null, root: null, restHandL: null,
+  order: ["upperarml", "lowerarml", "handl", "upperarmr", "lowerarmr", "handr"] };
+var STANCE = 1.00;          // 側身站姿（rad）
+var poseBlend = 0;
+
+var BOW_HAND = new THREE.Vector3(0.17, 1.46, -0.85);    // 持弓手：沿射線幾乎伸直（肩在 y1.44，臂全長 0.76）
+var DRAW_START = new THREE.Vector3(0.17, 1.47, -0.75);  // 未拉：手在弓把後方
+var ANCHOR_HAND = new THREE.Vector3(0.12, 1.54, -0.30); // 拉滿：貼下巴錨點
+var BOW_PITCH = 0.205;                                   // 弓上仰（決定箭弧線）
+var BOW_CANT = -0.21;                                   // 弓側傾 12°（真射手斜持的角度，再大就變成擺姿勢）
+var BOW_SCALE = 1.05;                                    // 弓長約 1.32m，近乎身高 3/4
+
+function loadArcher() {
+  if (!window.RANGER_B64 || !THREE.GLTFLoader) return;
+  var bin = atob(window.RANGER_B64);
+  var buf = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  new THREE.GLTFLoader().parse(buf.buffer, "", function (g) {
+    var m = g.scene;
+    // Ranger 的骨名用 dot（upperarm.l）→ 統一抹平成基地已有的命名
+    m.traverse(function (o) { if (o.name) o.name = o.name.replace(/\./g, ""); });
+    var drop = ["Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "Knife", "Throwable"];
+    var kill = [];
+    m.traverse(function (o) { if (drop.indexOf(o.name) >= 0) kill.push(o); });
+    kill.forEach(function (o) { o.parent.remove(o); });
+
+    var headBone = null;
+    m.traverse(function (o) { if (o.name === "head") headBone = o; });
+    m.rotation.y = Math.PI + STANCE;
+    m.updateMatrixWorld(true);
+    var hy = headBone ? headBone.getWorldPosition(new THREE.Vector3()).y : 1.2;
+    var s = 1.62 / Math.max(0.4, hy);   // 以頭骨定身高（比 bbox 稳定，帽兜/垓風不會拉低比例）
+    m.scale.setScalar(s);
+    m.position.y = 0;
+    m.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+
+    archer.add(m);
+    RIG.root = m;
+    RIG.head = headBone;
+
+    m.traverse(function (o) { if (RIG.order.indexOf(o.name) >= 0) RIG.bones[o.name] = o; });
+    RIG.saved = RIG.order.map(function () { return new THREE.Quaternion(); });
+    RIG.mixer = new THREE.AnimationMixer(m);
+    var idle = g.animations.filter(function (a) { return a.name === "Idle"; })[0] || g.animations[0];
+    if (idle) RIG.mixer.clipAction(idle).play();   // Ranger 無內建 clip，靜止姿勢由 IK 接手
+    archer.updateMatrixWorld(true);
+    RIG.restHandL = archer.worldToLocal(RIG.bones.handl.getWorldPosition(new THREE.Vector3()));
+    RIG.ready = true;
+    var lt = document.getElementById("loadTip");
+    if (lt) lt.remove();
+  }, function () { showToast("角色載入失敗", "#ffffff"); });
+}
+
+var _i1 = new THREE.Vector3(), _i2 = new THREE.Vector3(), _i3 = new THREE.Vector3();
+var _iq1 = new THREE.Quaternion(), _iq2 = new THREE.Quaternion(), _iq3 = new THREE.Quaternion();
+
+function aimBone(bone, child, dir) {
+  bone.getWorldPosition(_i1);
+  child.getWorldPosition(_i2);
+  _i3.subVectors(_i2, _i1).normalize();
+  _iq1.setFromUnitVectors(_i3, dir.normalize());
+  bone.getWorldQuaternion(_iq2);
+  bone.parent.getWorldQuaternion(_iq3);
+  bone.quaternion.copy(_iq3.invert().multiply(_iq1.multiply(_iq2)));
+  bone.updateMatrixWorld(true);
+}
+
+var _e1 = new THREE.Vector3(), _e2 = new THREE.Vector3();
+function solveArm(upper, lower, hand, target, pole) {
+  upper.getWorldPosition(_i1);
+  lower.getWorldPosition(_i2);
+  hand.getWorldPosition(_i3);
+  var a = _i1.distanceTo(_i2), b = _i2.distanceTo(_i3);
+  _e1.subVectors(target, _i1);
+  var d = Math.min(Math.max(_e1.length(), Math.abs(a - b) + 0.01), a + b - 0.01);
+  _e1.normalize();
+  var cosA = (a * a + d * d - b * b) / (2 * a * d);
+  var ang = Math.acos(Math.min(1, Math.max(-1, cosA)));
+  _e2.subVectors(pole, _i1);
+  _e2.addScaledVector(_e1, -_e2.dot(_e1)).normalize();
+  var elbow = _i1.clone().addScaledVector(
+    _e1.clone().multiplyScalar(Math.cos(ang)).addScaledVector(_e2, Math.sin(ang)), a);
+  aimBone(upper, lower, elbow.clone().sub(_i1));
+  lower.getWorldPosition(_e2);
+  aimBone(lower, hand, target.clone().sub(_e2));
+}
+
+var _nockW = new THREE.Vector3(), _gripW = new THREE.Vector3();
+var _bw = new THREE.Vector3(), _nw = new THREE.Vector3();
+
+// blend: 0 = 未拉弦（拉弦手在休息位）, 1 = 拉滿（貼面頰）
+function poseArms(blend, pull) {
+  if (!RIG.ready || !RIG.bones.upperarml) return;
+  var B = RIG.bones;
+  RIG.order.forEach(function (n, i) { RIG.saved[i].copy(B[n].quaternion); });
+
+  _gripW.copy(BOW_HAND);
+  _gripW.z -= 0.14 * Math.min(1, Math.max(0, pull));   // 拉弓時前推弓手：前後手的距離感加大，弦的伸長才看得出來
+  // 兩段式：blend 把手上到弦（靠弓把），pull 再往後拉到下巴 → 才看得見拉弦行程
+  _nockW.copy(DRAW_START);   // 拉弦手的基準位置：弦上、弓手後方 0.10m（唔用 restHandL，該值曾經偏到 1.8m 外）
+  _nockW.lerp(ANCHOR_HAND, Math.min(1, Math.max(0, pull)));
+  if (cheerT > 0) {                       // 答對：舉弓慶祝（模型無 clip，用 IK 擺）
+    var c = Math.min(1, cheerT * 1.6);
+    _gripW.lerp(_cheerBow, c);
+    _nockW.lerp(_cheerNock, c);
+  }
+  archer.localToWorld(_gripW);
+  archer.localToWorld(_nockW);
+
+  solveArm(B.upperarmr, B.lowerarmr, B.handr, _gripW,
+    archer.localToWorld(new THREE.Vector3(1.0, 0.45, 0.05)));
+  solveArm(B.upperarml, B.lowerarml, B.handl, _nockW,
+    archer.localToWorld(new THREE.Vector3(-1.0, 1.75, 0.55)));
+}
+
+/* ============================================================
+   3d. 建立場景
+   ============================================================ */
+var aimRing = null;
+// 命中特效 / 慶祝狀態
+var hitStop = 0, pushT = 0, pushIdx = -1, stuck = null, stuckT = 0;
+var stuckArrows = [];   // 射中後留在靶上的箭，下一題才清除
+var ZOOM = 0;           // 拉弓變焦量（0–1）
+var cheerT = 0, bootHidden = false, lastPerfect = false;
+var dust = null, dustT = 0;
+var _cheerBow = new THREE.Vector3(0.30, 1.56, 0.05);
+var _cheerNock = new THREE.Vector3(0.20, 1.53, 0.02);
+
+function layoutTargets() {
+  for (var i = 0; i < 4; i++) {
+    var t = targets[i];
+    // 四個靶排在以射手為圓心、半径 24m 的圆弧上：距離一致，力度計才有單一正解
+    var th = Math.atan2(ROW_OFF - ARCHER_X, ARCHER_Z - TARGET_Z) + (i - 1.5) * (ROW_GAP / 24);
+    t.group.position.set(ARCHER_X + 24 * Math.sin(th), TARGET_Y, ARCHER_Z - 24 * Math.cos(th));
+    t.group.rotation.y = -th;
+    t.baseY = TARGET_Y;
+  }
+}
+
+function raiseTargets(delay) {
+  for (var i = 0; i < targets.length; i++) {
+    targets[i].riseT = 1;
+    targets[i].riseDelay = (delay || 0) + i * 0.075;
+  }
+}
+
+// 已作答：除了中箭那個靶，其餘躺平
+function lowerTargets(skipIdx) {
+  for (var i = 0; i < targets.length; i++) {
+    if (i === skipIdx) continue;
+    targets[i].riseT = 0;
+    targets[i].riseDelay = Math.random() * 0.08;
+  }
+}
+
+function initScene() {
+  scene = new THREE.Scene();
+  scene.background = (function () {
+    // 天空漸層（canvas 2×256 豎向漸變）：頂深藍 → 地平線淡奶白，取代純色底
+    var c = document.createElement("canvas"); c.width = 2; c.height = 256;
+    var g = c.getContext("2d"), gr = g.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0.00, "#4d8fcf");
+    gr.addColorStop(0.42, "#8dc0e4");
+    gr.addColorStop(0.72, "#c3ddec");
+    gr.addColorStop(1.00, "#e6eef2");
+    g.fillStyle = gr; g.fillRect(0, 0, 2, 256);
+    var t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    return t;
+  })();
+  scene.fog = new THREE.Fog(0xc7dced, 34, 130);   // 霧色跟地平線一致，遠處才會自然融入天空
+
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 400);
+  camera.position.copy(CAM_BASE);
+  camera.lookAt(CAM_LOOK);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+  // iPad 用 2x 像素比等於畫 2200 萬像素：封頂 1.6 換取幀率
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, (navigator.maxTouchPoints || 0) > 0 ? 1.6 : 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;    // 電影色調映射：亮部不死白
+  renderer.toneMappingExposure = 1.18;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.domElement.id = "cv";
+  renderer.domElement.style.touchAction = "none";
+  document.body.appendChild(renderer.domElement);
+
+  var hemi = new THREE.HemisphereLight(0xdce9ff, 0x4a5f36, 0.34);
+  scene.add(hemi);
+  // 上午側光：太陽在射手左後方約 40° 高，影子拉向右前，靶面有立體感
+  var sun = new THREE.DirectionalLight(0xfff2dc, 0.62);
+  sun.position.set(-26, 21, 15);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -22; sun.shadow.camera.right = 26;
+  sun.shadow.camera.top = 20; sun.shadow.camera.bottom = -26;
+  sun.shadow.camera.near = 1; sun.shadow.camera.far = 80;
+  sun.shadow.bias = -0.0006;
+  sun.shadow.normalBias = 0.02;
+  scene.add(sun);
+
+  buildRange();
+
+  targets = ["A", "B", "C", "D"].map(function (L) { return makeTarget(L); });
+  layoutTargets();
+
+  archer = new THREE.Group();
+  archer.position.set(ARCHER_X, 0, ARCHER_Z);
+  scene.add(archer);
+
+  var bow = buildBow();
+  bow.position.copy(BOW_HAND);
+  bow.rotation.x = BOW_PITCH;
+  bow.rotation.z = BOW_CANT;
+  bow.scale.setScalar(BOW_SCALE);
+  archer.add(bow);
+
+  // 準星（落在靶平面上）
+  aimRing = new THREE.Mesh(new THREE.RingGeometry(0.16, 0.22, 24),
+    new THREE.MeshBasicMaterial({ color: 0xfff3b0, transparent: true, opacity: 0.85, side: THREE.DoubleSide }));
+  aimRing.rotation.x = -Math.PI / 2;
+  scene.add(aimRing);
+
+  clock = new THREE.Clock();
+  raycaster = new THREE.Raycaster();
+  fitCamera();
+  window.addEventListener("resize", fitCamera);
+  loadArcher();
+}
+
+function fitCamera() {
+  if (!renderer) return;
+  var a = window.innerWidth / window.innerHeight;
+  camera.aspect = a;
+  var fv = 2 * Math.atan(Math.tan(HFOV / 2) / a) * 180 / Math.PI;
+  FOV_BASE = Math.max(34, Math.min(58, fv));
+  var fw = 2 * Math.atan(Math.tan(HFOV_WIDE / 2) / a) * 180 / Math.PI;
+  FOV_WIDE = Math.max(FOV_BASE, Math.min(104, fw));
+  camera.fov = FOV_BASE;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+/* ============================================================
+   4. 遊戲流程
+   ============================================================ */
+var state = { list: [], idx: 0, score: 0, correct: 0, locked: true, cur: null, log: [], student: "" };
+var SAVE_KEY = "archery_progress_v1";
+function saveProgress() {
+  try {
+    if (!state.list.length || state.idx >= state.list.length) { localStorage.removeItem(SAVE_KEY); return; }
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      list: state.list, idx: state.idx, score: state.score, correct: state.correct,
+      log: state.log, student: state.student
+    }));
+  } catch (e) {}
+}
+function loadProgress() {
+  try {
+    var raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    var o = JSON.parse(raw);
+    if (!o || !o.list || !o.list.length || o.idx >= o.list.length) return null;
+    return o;
+  } catch (e) { return null; }
+}
+var el = {
+  scoreVal: document.getElementById("scoreVal"),
+  timer: document.getElementById("timer"),
+  flowers: document.getElementById("flowers"),
+  progress: document.querySelector("#progress i"),
+  qtext: document.getElementById("qtext"),
+  qmeta: document.getElementById("qmeta"),
+  opts: document.getElementById("opts"),
+  sol: document.getElementById("sol"),
+  panel: document.getElementById("panel"),
+  toast: document.getElementById("toast"),
+  cross: document.getElementById("cross"),
+  banner: document.getElementById("banner")
+};
+
+function updateHUD() {
+  el.scoreVal.textContent = state.score;
+  var on = state.correct % 6;
+  if (state.correct > 0 && on === 0) on = 6;
+  var s = "";
+  for (var i = 0; i < 6; i++) s += '<span class="' + (i < on ? "on" : "") + '">❀</span>';
+  el.flowers.innerHTML = s;
+  var pct = state.list.length ? (state.idx / state.list.length) * 100 : 0;
+  el.progress.style.height = pct + "%";
+}
+
+function startQuiz(list) {
+  if (!list || !list.length) { alert("題庫是空的，請檢查 CSV 格式。"); return; }
+  quizT0 = Date.now(); seconds = 0;
+  if (window.__tick) clearInterval(window.__tick);
+  window.__tick = setInterval(function () {
+    if (!quizT0) return;
+    seconds = Math.floor((Date.now() - quizT0) / 1000);
+    el.timer.textContent = "⏱ " + fmtTime(seconds);
+  }, 250);
+  el.timer.textContent = "⏱ 0:00";
+  state.list = list.slice();
+  for (var qi = state.list.length - 1; qi > 0; qi--) {   // 每局題目次序隨機（每次玩都唔同）
+    var qj = Math.floor(Math.random() * (qi + 1));
+    var qt = state.list[qi]; state.list[qi] = state.list[qj]; state.list[qj] = qt;
+  }
+  state.idx = 0; state.score = 0; state.correct = 0;
+  state.log = [];
+  state.lastSol = "";
+  document.getElementById("btnSol").hidden = true;
+  var nameEl = document.getElementById("stuName");
+  var nameEl2 = document.getElementById("stuNameT");
+  var nm = (nameEl && nameEl.value) || (nameEl2 && nameEl2.value) || "";
+  state.student = String(nm).trim().slice(0, 20);
+  document.getElementById("startScreen").hidden = true;
+  var _su = document.getElementById("stuScreen"); if (_su) _su.hidden = true;
+  document.getElementById("endScreen").hidden = true;
+  el.panel.hidden = false;
+  document.getElementById("cv").style.display = "";
+  el.cross.style.display = "block";
+  updateHUD();
+  showQuestion();
+}
+
+function showQuestion() {
+  if (state.idx >= state.list.length) { endQuiz(); return; }
+  var q = state.list[state.idx];
+  state.locked = false;
+  facingIndex = -1;
+  aimPull = 0.15;
+  shotMiss = 0;
+  el.qtext.textContent = q.q;
+  el.qmeta.textContent = "◆ 第 " + (state.idx + 1) + " 題 ◆";
+  el.opts.innerHTML = "";
+  el.sol.textContent = "";
+  document.getElementById("btnSol").hidden = true;   // 新一題（或重試）唔留上一題的解析入口
+
+  // 新一題：清掉上一題留在靶上的箭
+  for (var sk = 0; sk < stuckArrows.length; sk++) scene.remove(stuckArrows[sk]);
+  stuckArrows.length = 0;
+  stuck = null;
+
+  // 選項位置每題隨機：阻撓「記住答案位置」而非真正計算
+  var ord = [0, 1, 2, 3];
+  for (var si = ord.length - 1; si > 0; si--) {
+    var sj = Math.floor(Math.random() * (si + 1));
+    var tmp = ord[si]; ord[si] = ord[sj]; ord[sj] = tmp;
+  }
+  var prevTry = (state.cur && state.cur.qidx === state.idx) ? (state.cur.tries || 0) : 0;
+  state.cur = {
+    options: ord.map(function (i) { return q.options[i]; }),
+    answer: ord.indexOf(q.answer),
+    sol: q.sol || "",
+    qidx: state.idx,
+    tries: prevTry
+  };
+
+  // 箭靶本身就是答案：沒有 A/B/C/D 選項按鈕，射中哪個靶就是選哪個答案
+  el.opts.innerHTML = "";
+  el.opts.style.display = "none";
+  for (var j = 0; j < targets.length; j++) {
+    var t = targets[j];
+    if (t.label) { t.group.remove(t.label); t.label = null; }
+    var optTxt = (state.cur.options[j] || "").trim();
+    if (optTxt) {
+      t.label = makeLabelSprite(optTxt, { maxH: 1.30, maxW: 4.4, font: 64 });
+      t.label.position.set(0, -(TARGET_R + 0.62), 0.14);
+      t.group.add(t.label);
+    }
+    // 字母牌（A/B/C/D）永遠顯示在靶頂：答題卡講「正確答案 B」時學生要對得返
+    if (!t.lsp) {
+      t.lsp = makeLabelSprite(t.letter, { maxH: 0.62, maxW: 0.9, font: 72 });
+      t.lsp.position.set(0, TARGET_R + 0.52, 0.16);
+      t.group.add(t.lsp);
+    }
+    t.ring2.material.color.setHex(0xe8b83a);
+    t.disc.material.color.setHex(0x1e1a17);
+  }
+  raiseTargets(0.15);   // 新題目：四個靶依次升起
+  saveProgress();
+  updateHUD();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+function answer(choice, ring) {
+  if (state.locked) return;
+  state.locked = true;
+  var q = state.list[state.idx];
+  var cur = state.cur || { options: q.options, answer: q.answer, sol: q.sol || "" };
+  var ok = (choice === cur.answer);
+  var pts = (ok && ring > 0) ? ring : 0;   // 只有射中正確靶的新環才有分
+  if (!ok) { cur.tries = (cur.tries || 0) + 1; state.cur.tries = cur.tries; }
+  var showAns = ok || cur.tries >= 3;     // 第 3 次答錯才揭答案
+
+  // 3D 反應：正確靶的金心綠、射錯的灰
+  var t = targets[choice];
+  if (t) {
+    t.hit = 1;
+    t.ring2.material.color.setHex(ok ? 0x35c98d : 0x8c8c8c);
+  }
+  if (!ok && showAns && targets[cur.answer]) {
+    targets[cur.answer].ring2.material.color.setHex(0x35c98d);
+  }
+
+  // 選項樣式（答案卡只作顯示，不能點擊取分）
+  var pills = el.opts.children;
+  if (pills[choice]) pills[choice].classList.add(ok ? "right" : "wrong");
+  if (!ok && showAns && pills[cur.answer]) pills[cur.answer].classList.add("right");
+
+  if (ok) {
+    state.score += pts; state.correct++;
+    state.streak = (state.streak || 0) + 1;
+    cheerT = 1;                                   // 角色舉弓慶祝
+    var bonus = lastPerfect ? " 完美力度！" : "";
+    showToast("✓ 正確！ +" + pts + " 分" + bonus, "#2bb89a");
+    beep([660, 880], 0.09, "triangle");
+    if (state.streak >= 2) {                      // 連擊
+      var cb = document.getElementById("combo");
+      if (cb) {
+        cb.textContent = "連中 " + state.streak + " 題 ✦";
+        cb.classList.add("show");
+        setTimeout(function () { cb.classList.remove("show"); }, 1100);
+      }
+      var sb = document.getElementById("score");
+      if (sb) { sb.classList.add("pop"); setTimeout(function () { sb.classList.remove("pop"); }, 460); }
+    }
+  } else {
+    state.streak = 0;
+    if (showAns) {
+      showToast("✗ 答錯，正確答案 " + "ABCD"[cur.answer] + "（0 分）", "#e0483b");
+      var rightTxt = escapeHtml(cur.options[cur.answer] || "");
+      el.sol.innerHTML = "✗ 正確答案 <b>" + "ABCD"[cur.answer] + "：" + rightTxt + "</b>" +
+        (cur.sol ? "<br><b>解：</b>" + escapeHtml(cur.sol) : "");
+      state.lastSol = el.sol.innerHTML;
+      document.getElementById("btnSol").hidden = false;
+    } else {
+      showToast("✗ 答錯（0 分）· 再想清楚，仲有 " + (3 - cur.tries) + " 次機會", "#e0483b");
+      el.sol.textContent = "";
+      state.lastSol = "";
+      document.getElementById("btnSol").hidden = true;
+    }
+    beep([220, 165], 0.16, "sawtooth");
+  }
+
+  state.log.push({
+    n: state.idx + 1, q: q.q,
+    pick: "ABCD"[choice] + " " + (cur.options[choice] || ""),
+    correct: "ABCD"[cur.answer] + " " + (cur.options[cur.answer] || ""),
+    ok: ok ? 1 : 0, ring: ring || 0, pts: pts, perfect: lastPerfect ? 1 : 0
+  });
+  updateHUD();
+
+  // 答錯時解析卡停留 2.6 秒（解析約在 0.6 秒出現），避免學生亂點跳過
+  setTimeout(function () {
+    if (ok) state.idx++;   // 答對才推進；答錯＝同一題重試（四個靶重新升起）
+    showQuestion();
+  }, ok ? 1100 : 2600);
+}
+
+function showToast(text, color) {
+  el.toast.textContent = text;
+  el.toast.style.color = color;
+  el.toast.classList.add("show");
+  setTimeout(function () { el.toast.classList.remove("show"); }, 900);
+}
+
+function endQuiz() {
+  state.locked = true;
+  if (window.__tick) { clearInterval(window.__tick); window.__tick = 0; }
+  el.panel.hidden = true;
+  el.cross.style.display = "none";
+  el.progress.style.height = "100%";
+  var total = state.list.length;
+  document.getElementById("finalScore").textContent = state.score + " / " + (total * 10);
+  var pct = Math.round((state.correct / total) * 100);
+  var msg = (state.student ? "學生：" + state.student + "\n" : "") +
+    "答對 " + state.correct + " / " + total + " 題（" + pct + "%）。" +
+    "\n總用時 " + fmtTime(seconds) + "。";
+  if (pct >= 90) msg += "神射手！🏹";
+  else if (pct >= 70) msg += "好穩陣，繼續練！";
+  else if (pct >= 50) msg += "合格，再試一次會更好。";
+  else msg += "慢慢來，先重溫概念再挑戰。";
+  document.getElementById("finalMsg").textContent = msg;
+  document.getElementById("endScreen").hidden = false;
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+  beep([523, 659, 784], 0.12, "triangle");
+  lbAfterQuiz();
+}
+
+/* ============================================================
+   5. 操作：拖曳瞄準 + 右側力度計
+   ============================================================ */
+var AIM = { yaw: 0, base: 0, min: 0, max: 0, elev: 0.16 };
+var MODE = "idle";                 // idle | ready | draw | shoot
+var pullNow = 0.10, followT = 0, camT = 0, relCam = 0;
+var flight = null, shotMiss = 0, shotLocked = false;
+var uiReady = false, lastIdx = -1;
+
+var pmHold = false, pmVal = 0, pmT = 0, PM_PERIOD = 2.10;
+var pmWrap = null, pmFill = null, pmMark = null, pmHint = null;
+var pmPct = null, pmSpd = null;
+// 力度 → 箭速（m/s）；仰角固定 0.40 rad，所以力度直接決定到靶高度
+function powerSpeed(p) { return SPEED_MIN + (SPEED_MAX - SPEED_MIN) * p; }
+
+var SPEED_MIN = 14, SPEED_MAX = 30, LAUNCH_ELEV = 0.30;
+
+/* ---- 每次射箭隨機指定「完美力度」位置：由發射角吸收速度差 → 完美區每次不同 ---- */
+var PM_GOOD_LO = 0.38, PM_GOOD_HI = 0.545, PM_PERF_LO = 0.425, PM_PERF_HI = 0.475;
+var PERFECT_P = 0.45;
+
+function shotGeom() {  // 四個靶對角色等距（圓弧排列），所以用平均距離校準，不能用單一 z 平面
+  var from = BOW.arrow.localToWorld(new THREE.Vector3(0, 0, -ARROW_LEN));
+  var sum = 0, n = 0;
+  for (var i = 0; i < targets.length; i++) {
+    var c = targets[i].group.position;
+    sum += Math.sqrt((c.x - from.x) * (c.x - from.x) + (c.z - from.z) * (c.z - from.z));
+    n++;
+  }
+  return { d: n ? sum / n : 24, y0: from.y };
+}
+
+function elevFor(v, d, h) {        // 平射解：tanθ = (v² − √(v⁴ − g(g d² + 2 h v²))) / (g d)
+  var g = 9.8, v2 = v * v, disc = v2 * v2 - g * (g * d * d + 2 * h * v2);
+  if (disc < 0) return null;
+  return Math.atan((v2 - Math.sqrt(disc)) / (g * d));
+}
+
+function heightAtPlane(p, d, y0) { // 力度 p、目前仰角，在靶平面的高度
+  var v = powerSpeed(p), vh = v * Math.cos(LAUNCH_ELEV), vy = v * Math.sin(LAUNCH_ELEV);
+  if (vh < 0.5) return -99;
+  var t = d / vh;
+  return y0 + vy * t - 0.5 * 9.8 * t * t;
+}
+
+function rollPowerWindow() {
+  var gm = shotGeom(), h = TARGET_Y - gm.y0;
+  for (var n = 0; n < 14; n++) {
+    var ps = 0.26 + Math.random() * 0.11;  // 仰角約 18–24°：弧線清楚但唔誇張
+    var el = elevFor(powerSpeed(ps), gm.d, h);
+    if (el !== null && el > 0.05 && el < 0.72) { LAUNCH_ELEV = el; PERFECT_P = ps; break; }
+  }
+  var okLo = 1, okHi = 0, pLo = 1, pHi = 0;
+  for (var i = 0; i <= 500; i++) {
+    var p = i / 500, dy = Math.abs(heightAtPlane(p, gm.d, gm.y0) - TARGET_Y);
+    if (dy <= TARGET_R * 0.85) { okLo = Math.min(okLo, p); okHi = Math.max(okHi, p); }
+    if (dy <= 0.13) { pLo = Math.min(pLo, p); pHi = Math.max(pHi, p); }
+  }
+  if (okHi <= okLo) { okLo = Math.max(0, PERFECT_P - 0.09); okHi = Math.min(1, PERFECT_P + 0.09); }
+  PM_GOOD_LO = okLo; PM_GOOD_HI = okHi;
+  PM_PERF_LO = PERFECT_P - 0.0225; PM_PERF_HI = PERFECT_P + 0.0225;   // 完美區固定 4.5% 寬
+  var gEl = document.getElementById("pmGood"), pEl = document.getElementById("pmPerfect");
+  if (gEl) { gEl.style.bottom = (PM_GOOD_LO * 100).toFixed(1) + "%"; gEl.style.height = ((PM_GOOD_HI - PM_GOOD_LO) * 100).toFixed(1) + "%"; }
+  if (pEl) { pEl.style.bottom = (PM_PERF_LO * 100).toFixed(1) + "%"; pEl.style.height = ((PM_PERF_HI - PM_PERF_LO) * 100).toFixed(1) + "%"; }
+}
+
+function aimBaseYaw() {
+  var cx = ROW_OFF, cz = TARGET_Z;
+  return Math.atan2(-(cx - ARCHER_X), -(cz - ARCHER_Z));
+}
+
+function setupPowerMeter() {
+  pmWrap = document.getElementById("pmWrap");
+  pmFill = document.getElementById("pmFill");
+  pmMark = document.getElementById("pmMark");
+  pmHint = document.getElementById("pmHint");
+  pmPct = document.getElementById("pmPct");
+  pmSpd = document.getElementById("pmSpd");
+
+  function pmDown() {
+    if (!canShoot()) return;
+    rollPowerWindow();          // 每次射箭重新擲「完美力度」位置
+    pmHold = true; pmT = 0; pmVal = 0;
+    pmWrap.classList.add("hot");
+    pmHint.textContent = "放開射箭";
+    startDraw();                          // 持續拉弓聲（放弦時停）
+  }
+  function pmUp() {
+    if (!pmHold) return;
+    pmHold = false;
+    stopDraw();
+    pmWrap.classList.remove("hot");
+    pmHint.textContent = "按住蓄力";
+    if (pmSpd) pmSpd.textContent = "力度要求每箭隨機";
+    fire(pmVal);
+  }
+  pmWrap.style.touchAction = "none";
+  // 按住計量器時不搶 pointer capture：一 capture，pointermove 就收不到，拖曳瞄準會失效
+  pmWrap.addEventListener("pointerdown", function (e) {
+    e.preventDefault(); _lastPtr = Date.now(); pmDown();
+  });
+  pmWrap.addEventListener("pointerup", function () { _lastPtr = Date.now(); pmUp(); });
+  pmWrap.addEventListener("pointercancel", function () { _lastPtr = Date.now(); pmUp(); });
+  pmWrap.addEventListener("lostpointercapture", function () { _lastPtr = Date.now(); pmUp(); });
+  addTouchCompat(pmWrap, pmDown, null, pmUp);
+
+  // 平板模式：力度計右邊一整條看不見的「手指區」，不用瞄準那個窄計
+  var pad = document.getElementById("pmPad");
+  if (pad) {
+    pad.style.touchAction = "none";
+    pad.addEventListener("pointerdown", function (e) {
+      e.preventDefault(); _lastPtr = Date.now(); pmDown();
+    });
+    pad.addEventListener("pointerup", function () { _lastPtr = Date.now(); pmUp(); });
+    pad.addEventListener("pointercancel", function () { _lastPtr = Date.now(); pmUp(); });
+    addTouchCompat(pad, pmDown, null, pmUp);
+  }
+
+  // 按住畫面任何空白位置即蓄力；同時左右拖曳＝瞄準；放開＝放箭
+  var gest = false;
+  function uiHit(t) {
+    return !!(t && t.closest && t.closest("#panel,#devSeg,#sound,#opts,.opt,button,.screen,#boot,#rotate,#toast"));
+  }
+  function gDown(e) {
+    if (gest || e.button > 0 || uiHit(e.target) || !canShoot()) return;
+    e.preventDefault();
+    _lastPtr = Date.now();
+    gest = true;
+    pmDown();
+    aimDown(e.clientX);
+  }
+  function gMove(e) { if (gest) aimMove(e.clientX); }
+  function gUp() {
+    if (!gest) return;
+    gest = false;
+    _lastPtr = Date.now();
+    aimUp(); pmUp();
+  }
+  document.addEventListener("pointerdown", gDown, { passive: false });
+  document.addEventListener("pointermove", gMove);
+  document.addEventListener("pointerup", gUp);
+  document.addEventListener("pointercancel", gUp);
+  // iPad 上 pointerup 有機會被系統吞掉（切 app、分享面板、通知中心）→ gest/pmHold 卡住就整局不能再瞄
+  window.addEventListener("pointerup", gUp, true);
+  window.addEventListener("touchend", gUp, { passive: true, capture: true });
+  window.addEventListener("blur", gUp);
+  document.addEventListener("visibilitychange", function () { if (document.hidden) gUp(); });
+  // iOS 舊版後備（pointer 事件沒到就用 touch）
+  addTouchCompat(document, function (x) { if (!gest && canShoot()) { gest = true; pmDown(); aimDown(x); } }, null, gUp);
+}
+
+/* ---- 裝置模式：電腦（滑鼠）/ 平板手機（觸控） ---- */
+var DEVMODE = "pc";
+function setDev(d) {
+  DEVMODE = (d === "touch") ? "touch" : "pc";
+  document.body.dataset.dev = DEVMODE;
+  try { localStorage.setItem("aq.dev", DEVMODE); } catch (x) {}
+  var bs = document.querySelectorAll("#devSeg button");
+  for (var i = 0; i < bs.length; i++)
+    bs[i].setAttribute("aria-pressed", bs[i].getAttribute("data-d") === DEVMODE ? "true" : "false");
+  var h = document.getElementById("aimHint");
+  if (h) h.textContent = DEVMODE === "touch" ? "手指左右拖曳 ◀ ▶ 瞄準" : "拖曳畫面 ◀ ▶ 瞄準目標";
+  gyroUpdateButton();
+}
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem("aq.dev"); } catch (x) {}
+  var auto = (window.matchMedia && matchMedia("(pointer:coarse)").matches) ? "touch" : "pc";
+  setDev(saved || auto);
+  var bs = document.querySelectorAll("#devSeg button");
+  for (var i = 0; i < bs.length; i++)
+    bs[i].addEventListener("click", function () { setDev(this.getAttribute("data-d")); });
+})();
+
+/* ---- 陀螺儀瞄準（iPad）----
+   根據 MDN DeviceOrientation：alpha/beta/gamma 是「裝置座標」，橫向擺放時左右傾斜落在 beta 而非 gamma
+   → 必須按 screen.orientation.angle 重映射。濾波用 One Euro filter（Casiez & Roussel, CHI 2012）：
+   静止時強降噪、快速轉動時不加延遲，係目前互動系統的標準做法。
+   iOS 13+：必須在使用者手勢內呼叫 DeviceOrientationEvent.requestPermission()，而且頁面必須是 HTTPS。
+*/
+var GYRO = {
+  on: false, base: null, baseYaw: 0, angleOverride: null, seen: 0, timer: 0,
+  GAIN: 0.008,      // rad／度：只作微調。傾 3° 約轉 1.4°、傾 10° 約轉 4.6°；大範圍瞄準靠拖曳
+  DEAD: 0.30,       // 死區（度）：抗手震
+  NORM: 45,         // 濾波前除以 45 → ±1，ONE EURO 的 BETA 才有通用意義
+  f: { x: 0, dx: 0, t: 0 },
+  // 自動修軸用（Safari 的 screen.orientation.angle 在部分 iPad 會回報錯值，WebKit bug 254863）
+  prevT: null, prevA: null, accT: 0, accA: 0, probeN: 0
+};
+var btnGyro = document.getElementById("btnGyro");
+var btnGyroC = document.getElementById("btnGyroC");
+function gyroScreenAngle() {
+  if (GYRO.angleOverride !== null) return GYRO.angleOverride;
+  var a = null;
+  if (window.screen && screen.orientation && typeof screen.orientation.angle === "number") a = screen.orientation.angle;
+  else if (typeof window.orientation === "number") a = window.orientation;   // 舊 iOS 的 deprecated 值
+  if (a === null) a = 0;
+  a = ((a % 360) + 360) % 360;
+  // 部分 Safari 在橫向仍回報 0 → 用視窗比例兜底（90 或 270 由後面的自動修軸解決）
+  if (a === 0 && window.innerWidth > window.innerHeight * 1.2) a = 90;
+  return a;
+}
+function gyroTiltXAt(e, a) {            // 指定螢幕角度下的「螢幕左右方向」傾角（度）
+  var b = e.beta || 0, g = e.gamma || 0;
+  if (a === 90) return -b;
+  if (a === 180) return -g;
+  if (a === 270) return b;
+  return g;                             // 直向
+}
+function gyroTiltX(e) { return gyroTiltXAt(e, gyroScreenAngle()); }
+function gyroOneEuro(v, t) {
+  var f = GYRO.f;
+  if (!f.t) { f.t = t; f.x = v; f.dx = 0; return v; }
+  var dt = Math.max(0.004, (t - f.t) / 1000);
+  f.t = t;
+  var MINC = 1.5, BETA = 0.02, DC = 1.0;
+  var dx = (v - f.x) / dt;
+  var ad = 1 / (1 + (1 / (2 * Math.PI * DC)) / dt);
+  f.dx += ad * (dx - f.dx);
+  var cut = MINC + BETA * Math.abs(f.dx);
+  var a = 1 / (1 + (1 / (2 * Math.PI * cut)) / dt);
+  f.x += a * (v - f.x);
+  return f.x;
+}
+function gyroRecenter(silent) {
+  GYRO.base = null;                     // 下一個事件重新取基準，避免漂移
+  if (!silent) showToast("陀螺儀已置中", "#2bb89a");
+}
+function onGyro(e) {
+  if (!GYRO.on) return;
+  if (e.beta === null || e.gamma === null) return;
+  GYRO.seen = Date.now();
+  var t = gyroTiltX(e);
+  var alt = gyroTiltXAt(e, (gyroScreenAngle() + 90) % 360);
+  /* 自動修軸：Safari 可能回報錯的螢幕角度（WebKit bug 254863），令左右傾斜落在另一軸。
+     每 40 個事件（約 0.7 秒）比較兩軸的實際變動量：正在用的軸幾乎不動、另一軸明顯在動 → 換軸。 */
+  if (GYRO.prevT === null) { GYRO.prevT = t; GYRO.prevA = alt; }
+  else {
+    GYRO.accT += Math.abs(t - GYRO.prevT);
+    GYRO.accA += Math.abs(alt - GYRO.prevA);
+    GYRO.prevT = t; GYRO.prevA = alt;
+    if (++GYRO.probeN >= 40) {
+      if (GYRO.accA > 8 && GYRO.accT < 2) {
+        GYRO.angleOverride = (gyroScreenAngle() + 90) % 360;
+        GYRO.base = null;                      // 換軸＝重新取基準
+        GYRO.f = { x: 0, dx: 0, t: 0 };
+        GYRO.prevT = null;
+        showToast("已自動校正傾斜方向", "#2bb89a");
+      }
+      GYRO.probeN = 0; GYRO.accT = 0; GYRO.accA = 0;
+    }
+  }
+  var deg = gyroOneEuro(t / GYRO.NORM, e.timeStamp || performance.now()) * GYRO.NORM;
+  if (GYRO.base === null) { GYRO.base = deg; GYRO.baseYaw = AIM.yaw; return; }
+  var d = deg - GYRO.base;
+  if (Math.abs(d) < GYRO.DEAD) return;
+  AIM.yaw = Math.max(AIM.min, Math.min(AIM.max, GYRO.baseYaw - d * GYRO.GAIN));
+}
+function gyroLabel() {
+  if (btnGyro) {
+    btnGyro.textContent = GYRO.on ? "🎮 陀螺儀 開" : "🎮 陀螺儀瞄準";
+    btnGyro.setAttribute("aria-pressed", GYRO.on ? "true" : "false");
+  }
+  if (btnGyroC) btnGyroC.style.display = GYRO.on ? "block" : "none";
+  var h = document.getElementById("aimHint");
+  if (h) {
+    if (GYRO.on) h.textContent = "陀螺儀微調：輕微傾斜即可（大範圍請拖曳）";
+    else h.textContent = DEVMODE === "touch" ? "手指左右拖曳 ◀ ▶ 瞄準" : "拖曳畫面 ◀ ▶ 瞄準目標";
+  }
+}
+function gyroStop() {
+  GYRO.on = false; GYRO.base = null; clearTimeout(GYRO.timer);
+  window.removeEventListener("deviceorientation", onGyro);
+  gyroLabel();
+}
+function gyroStart() {
+  GYRO.on = true; GYRO.base = null; GYRO.seen = 0;
+  GYRO.f = { x: 0, dx: 0, t: 0 };       // 清濾波器狀態，避免舊延遲
+  GYRO.prevT = null; GYRO.probeN = 0; GYRO.accT = 0; GYRO.accA = 0;
+  window.addEventListener("deviceorientation", onGyro);
+  gyroLabel();
+  showToast("陀螺儀已開啟：輕微傾斜即微調", "#2bb89a");
+  clearTimeout(GYRO.timer);
+  GYRO.timer = setTimeout(function () {  // 授權成功但收不到數據（常見於非 HTTPS / 省電模式）
+    if (GYRO.on && !GYRO.seen) {
+      gyroStop();
+      showToast("收不到陀螺儀數據（iOS 必須 HTTPS）", "#e0483b");
+    }
+  }, 1500);
+}
+function gyroToggle() {
+  if (GYRO.on) { gyroStop(); return; }
+  var DOE = window.DeviceOrientationEvent;
+  if (!DOE) { showToast("此裝置不支援陀螺儀", "#e0483b"); return; }
+  if (typeof DOE.requestPermission === "function") {
+    DOE.requestPermission().then(function (r) {
+      if (r === "granted") gyroStart();
+      else showToast("陀螺儀權限被拒絕（需 HTTPS）", "#e0483b");
+    }).catch(function () { showToast("無法取得陀螺儀權限（需 HTTPS）", "#e0483b"); });
+    return;
+  }
+  gyroStart();
+}
+function gyroUpdateButton() {
+  if (!btnGyro) return;
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var ok = DEVMODE === "touch" && ("DeviceOrientationEvent" in window) && !reduce;
+  btnGyro.style.display = ok ? "block" : "none";
+  if (!ok && GYRO.on) gyroStop();
+  else gyroLabel();
+}
+if (btnGyro) btnGyro.addEventListener("click", gyroToggle);
+if (btnGyroC) btnGyroC.addEventListener("click", function () { gyroRecenter(false); });
+// 轉向時左右軸會由 gamma 轉成 beta：iOS 要等轉向動畫完結才更新角度，所以延後再置中一次
+function gyroOnOrient() {
+  if (!GYRO.on) return;
+  GYRO.angleOverride = null;
+  GYRO.prevT = null; GYRO.probeN = 0; GYRO.accT = 0; GYRO.accA = 0;
+  gyroRecenter(true);
+  setTimeout(function () { if (GYRO.on) gyroRecenter(true); }, 400);
+}
+window.addEventListener("orientationchange", gyroOnOrient);
+if (window.screen && screen.orientation && screen.orientation.addEventListener)
+  screen.orientation.addEventListener("change", gyroOnOrient);
+gyroUpdateButton();
+gyroLabel();
+
+/* ---- iPad 觸控兼容層：萬一 pointer 事件未觸發，touch 接手（600ms 内去重） ---- */
+var _lastPtr = 0;
+function addTouchCompat(node, onDown, onMove, onUp) {
+  function fresh() { return Date.now() - _lastPtr > 600; }
+  node.addEventListener("touchstart", function (e) {
+    if (!fresh()) return;
+    e.preventDefault();
+    var t = e.changedTouches[0]; onDown(t.clientX, t.clientY);
+  }, { passive: false });
+  if (onMove) node.addEventListener("touchmove", function (e) {
+    if (!fresh()) return;
+    e.preventDefault();
+    var t = e.changedTouches[0]; onMove(t.clientX, t.clientY);
+  }, { passive: false });
+  node.addEventListener("touchend", function () {
+    if (!fresh()) return;
+    onUp();
+  }, { passive: false });
+  node.addEventListener("touchcancel", function () {
+    if (!fresh()) return;
+    onUp();
+  }, { passive: false });
+}
+
+function canShoot() {
+  return state.list.length > 0 && !state.locked && !shotLocked && !flight;
+}
+
+function resetAim() {
+  AIM.base = aimBaseYaw();
+  // 瞄準錐度由真正靶位算出來，否則最側邊的靶永遠射不到
+  var lo = 1e9, hi = -1e9;
+  for (var i = 0; i < targets.length; i++) {
+    var p = targets[i].group.position;
+    var a = Math.atan2(-(p.x - ARCHER_X), -(p.z - ARCHER_Z));
+    if (a < lo) lo = a;
+    if (a > hi) hi = a;
+  }
+  if (!(lo <= hi)) { lo = AIM.base - 0.26; hi = AIM.base + 0.26; }
+  AIM.min = lo - 0.07;
+  AIM.max = hi + 0.07;
+  AIM.yaw = AIM.base;
+  shotMiss = 0;
+  shotLocked = false;
+  MODE = "idle";
+  if (typeof GYRO !== "undefined" && GYRO && GYRO.on) gyroRecenter(true);  // 新題重新取基準
+}
+
+/* ---- 拖曳瞄準 ---- */
+var dragX = 0, dragYaw = 0, dragging = false, dragT0 = 0;
+
+function setupAimDrag() {
+  var cv = renderer.domElement;
+  cv.style.touchAction = "none";
+  cv.addEventListener("pointerdown", function (e) {
+    _lastPtr = Date.now(); aimDown(e.clientX);
+    try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+  });
+  cv.addEventListener("pointermove", function (e) { _lastPtr = Date.now(); aimMove(e.clientX); });
+  cv.addEventListener("pointerup", function () { _lastPtr = Date.now(); aimUp(); });
+  cv.addEventListener("pointercancel", function () { _lastPtr = Date.now(); aimUp(); });
+  addTouchCompat(cv, aimDown, aimMove, aimUp);
+}
+function aimDown(x) {
+  if (!canShoot()) return;
+  dragging = true; dragX = x; dragYaw = AIM.yaw; dragT0 = Date.now();
+  el.cross.style.display = "none";
+}
+function aimMove(x) {
+  if (!dragging) return;
+  if (Math.abs(x - dragX) < 4) return;              // 4px 死區：按住不動時瞄準不會飄
+  var k = (DEVMODE === "touch") ? 0.0020 : 0.0015;   // 觸控／滑鼠各自手感
+  if (Date.now() - dragT0 > 400) k *= 0.6;  // 按住越久越慢，方便微調
+  AIM.yaw = Math.max(AIM.min, Math.min(AIM.max, dragYaw - (x - dragX) * k));
+}
+function aimUp() { dragging = false; }
+
+/* ---- 發射 ---- */
+function fire(power) {
+  if (!canShoot()) return;
+  power = Math.max(0, Math.min(1, power));
+  beep([520, 220], 0.07, "triangle");   // 放弦
+
+  BOW.grp.updateWorldMatrix(true, true);
+  var from = BOW.arrow.localToWorld(new THREE.Vector3(0, 0, -ARROW_LEN));
+  var q = BOW.grp.getWorldQuaternion(new THREE.Quaternion());
+  // 拋射：水平方向跟弓的朝向，仰角固定（力度只改速度）——力度才會決定落點
+  // 拋射：水平方向直接用準星角度（不等弓追上）——玩家瞄哪、箭就射哪
+  var dir = new THREE.Vector3(-Math.sin(AIM.yaw), 0, -Math.cos(AIM.yaw));
+  if (dir.lengthSq() < 1e-6) dir.set(0, 0, -1);
+  dir.normalize().multiplyScalar(Math.cos(LAUNCH_ELEV));
+  dir.y = Math.sin(LAUNCH_ELEV);
+
+  var mesh = BOW.arrow.clone(true);
+  scene.add(mesh);
+  mesh.position.copy(from);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), dir);
+  BOW.arrow.visible = false;
+
+  var speed = SPEED_MIN + (SPEED_MAX - SPEED_MIN) * power;
+  flight = { mesh: mesh, pos: from.clone(), prev: from.clone(),
+             vel: dir.multiplyScalar(speed), life: 0 };
+
+  MODE = "shoot";
+  lastPerfect = (power > PM_PERF_LO && power < PM_PERF_HI);
+  if (lastPerfect) { showToast("完美力度！", "#ffcc4d"); beep([980, 1320, 1760], 0.07, "triangle"); }
+  shotLocked = true;
+  followT = 1;
+  relCam = 0.5;
+  beep([900, 520], 0.05, "square");
+}
+
+// 命中點相對靶心 → 環分（8 等份環，X 環同為 10 分，白環以下 0 分）
+function ringScoreAt(dx, dy, R) {
+  var rr = Math.sqrt(dx * dx + dy * dy) / R;
+  if (rr >= 1) return 0;
+  return Math.max(3, 10 - Math.floor(rr / 0.125));
+}
+
+// 命中塵埃（16 粒，0.55 秒消失；不用粒子系統，iPad 也不掉幀）
+function spawnDust(p) {
+  if (dust) { scene.remove(dust); dust = null; }
+  var n = 16, pos = new Float32Array(n * 3), vel = new Float32Array(n * 3);
+  for (var i = 0; i < n; i++) {
+    pos[i * 3] = p.x; pos[i * 3 + 1] = p.y; pos[i * 3 + 2] = p.z + 0.12;
+    var a = Math.random() * Math.PI * 2, s = 0.7 + Math.random() * 1.5;
+    vel[i * 3] = Math.cos(a) * s;
+    vel[i * 3 + 1] = 0.5 + Math.random() * 1.3;
+    vel[i * 3 + 2] = Math.sin(a) * s * 0.6;
+  }
+  var g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  dust = new THREE.Points(g, new THREE.PointsMaterial({
+    color: 0xf4e6c0, size: 0.16, transparent: true, opacity: 0.9, depthWrite: false
+  }));
+  dust.frustumCulled = false;
+  dust.userData = { n: n, v: vel };
+  scene.add(dust);
+  dustT = 0;
+}
+
+function resolveShot(hitIdx, ring) {
+  var f = flight;
+  flight = null;
+  if (f) {
+    if (hitIdx < 0) {
+      f.mesh.visible = false;
+      scene.remove(f.mesh);
+    } else {
+      f.mesh.visible = true;
+      // 箭留在靶上，直到下一題才清除（看得見自己射在哪個位置）
+      stuckArrows.push(f.mesh);
+    }
+  }
+  followT = 0;
+
+  if (hitIdx >= 0) {
+    targets[hitIdx].hit = 1;
+    beep([140, 80], 0.12, "sine");   // 中靶咚
+    // 環數分層音效：10 環最高音，越外越沉
+    // 命中震撼：時間凝止 0.11 秒 + 鏡頭推近 + 箭尾震動 + 塵埃
+    hitStop = 0.11; pushT = 1; pushIdx = hitIdx;
+    if (f && f.mesh) { stuck = f.mesh; stuckT = 0; }
+    spawnDust(f ? f.pos : targets[hitIdx].group.position);
+    var _fq = 560 + Math.max(0, Math.min(10, ring || 0)) * 62;
+    beep([_fq, _fq * 1.52], 0.07, "triangle");
+    lowerTargets(hitIdx);   // 射中的留下，其餘躺平
+    setTimeout(function () { shotLocked = false; answer(hitIdx, ring); }, 300);
+  } else {
+    shotMiss++;
+    if (el.opts) {
+    var canSkip = shotMiss >= 3 && !state.locked;
+    el.opts.style.display = canSkip ? "grid" : "none";
+    if (canSkip && el.opts.children.length === 0) {
+      var skipBtn = document.createElement("div");
+      skipBtn.className = "opt";
+      skipBtn.style.gridColumn = "1 / -1";
+      skipBtn.textContent = "跳過此題（不計分）→";
+      skipBtn.addEventListener("click", function (e) { e.stopPropagation(); answer(-1, 0); });
+      el.opts.appendChild(skipBtn);
+    }
+  }
+    beep([110, 70], 0.10, "sine");   // 落地
+    shotLocked = false;
+    showToast("射失…", "#ffffff");
+    beep([180], 0.12, "sawtooth");
+    raiseTargets(0);   // 射失：四個靶保持立起，讓學生再射一次（躺平會鎖死）
+    MODE = "ready";
+  }
+}
+
+/* ---- 每一格 ---- */
+var _retW = new THREE.Vector3(), _dirW = new THREE.Vector3(), _q2 = new THREE.Quaternion();
+var _camPos = new THREE.Vector3(), _camLook = new THREE.Vector3();
+var _sideW = new THREE.Vector3(), _rowC = new THREE.Vector3();
+
+function updateAimRing() {
+  if (!aimRing) return;
+  BOW.grp.updateWorldMatrix(true, false);
+  BOW.grp.getWorldQuaternion(_q2);
+  _dirW.set(0, 0, -1).applyQuaternion(_q2);
+  _retW.copy(BOW.grp.position); archer.localToWorld(_retW);
+  if (Math.abs(_dirW.z) < 0.001) return;
+  var t = (TARGET_Z - _retW.z) / _dirW.z;
+  if (t < 0) return;
+  aimRing.position.copy(_retW).addScaledVector(_dirW, t);
+  aimRing.visible = canShoot();
+  // 瞄準指示：準星落在哪一個靶的範圍内，就讓那靶外圈發微光（只顯示，不修正）
+  var gap = 0.06;
+  if (targets.length > 1) {
+    var b0 = Math.atan2(-(targets[0].group.position.x - archer.position.x), -(targets[0].group.position.z - archer.position.z));
+    var b1 = Math.atan2(-(targets[1].group.position.x - archer.position.x), -(targets[1].group.position.z - archer.position.z));
+    gap = Math.abs(b0 - b1) * 0.5;
+  }
+  var bestI = -1, bestD = 1e9;
+  for (var i = 0; i < targets.length; i++) {
+    var tp = targets[i].group.position;
+    var ang = Math.atan2(-(tp.x - archer.position.x), -(tp.z - archer.position.z));
+    var dd = Math.abs(((ang - AIM.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+    if (dd < bestD) { bestD = dd; bestI = i; }
+  }
+  for (var j = 0; j < targets.length; j++) {
+    var on = (j === bestI && bestD < gap && aimRing.visible) ? 1 : 0;
+    var mm = targets[j].disc.material;
+    if (mm.emissive) mm.emissive.setHex(on ? 0x4a4020 : 0x000000);
+  }
+}
+
+function updateFlight(dt) {
+  if (!flight) return;
+  var f = flight;
+  f.life += dt;
+  f.prev.copy(f.pos);
+  f.pos.addScaledVector(f.vel, dt);
+  f.vel.y -= 9.8 * dt;
+
+  var hit = -1, best = 1;
+  for (var i = 0; i < targets.length; i++) {
+    var c = targets[i].group.position;
+    if (targets[i].rise < 0.6) continue;   // 躺下的靶不可中
+    // 扁橢球：左右／上下要準（瞄準技術），遠近較寬容（與力度計綠區同步）
+    var dd = segNorm(c, f.prev, f.pos, TARGET_R, TARGET_R, 0.7);
+    if (dd < best) { best = dd; hit = i; }
+  }
+
+  f.mesh.position.copy(f.pos);
+  var v = f.vel.clone().normalize();
+  f.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), v);
+
+  if (hit >= 0) {
+    f.mesh.position.copy(f.pos);
+    // 命中點 → 真實環數
+    var tc = targets[hit].group.position;
+    var ring = ringScoreAt(f.pos.x - tc.x, f.pos.y - tc.y, TARGET_R);
+    resolveShot(hit, ring);
+    return;
+  }
+  if (f.pos.y <= 0.05 || f.life > 4) {
+    f.pos.y = Math.max(f.pos.y, 0.05);
+    resolveShot(-1);
+  }
+}
+
+function segDist(p, a, b) {
+  var ab = new THREE.Vector3().subVectors(b, a);
+  var t = new THREE.Vector3().subVectors(p, a).dot(ab) / (ab.lengthSq() || 1);
+  t = Math.max(0, Math.min(1, t));
+  return new THREE.Vector3().subVectors(p, a.clone().addScaledVector(ab, t)).length();
+}
+
+// 歸一化橢球距離（≤1 即命中）：x/y 要準，z（遠近）寬容
+function segNorm(c, a, b, sx, sy, sz) {
+  var best = 1e9;
+  for (var k = 0; k <= 6; k++) {
+    var t = k / 6;
+    var dx = (a.x + (b.x - a.x) * t - c.x) / sx;
+    var dy = (a.y + (b.y - a.y) * t - c.y) / sy;
+    var dz = (a.z + (b.z - a.z) * t - c.z) / sz;
+    var d = dx * dx + dy * dy + dz * dz;
+    if (d < best) best = d;
+  }
+  return Math.sqrt(best);
+}
+
+/* ---- 拋物線提示：拉弓時顯示，點數隨力度升降 ---- */
+var TRAJ_N = 34;
+var trajPts = null;   // Group：一顆顆小球（用 Mesh 確保一定是圓形）
+function ensureTraj() {
+  if (trajPts) return;
+  var geo = new THREE.SphereGeometry(0.085, 8, 6);
+  var mat = new THREE.MeshBasicMaterial({ color: 0xff6a1a, depthTest: false, depthWrite: false });
+  trajPts = new THREE.Group();
+  for (var k = 0; k < TRAJ_N; k++) {
+    var m = new THREE.Mesh(geo, mat);
+    m.renderOrder = 10;
+    m.visible = false;
+    trajPts.add(m);
+  }
+  scene.add(trajPts);
+}
+function updateTraj() {
+  ensureTraj();
+  if (!pmHold || !canShoot()) { trajPts.visible = false; return; }
+  trajPts.visible = true;
+  BOW.grp.updateWorldMatrix(true, true);
+  var from = BOW.arrow.localToWorld(new THREE.Vector3(0, 0, -ARROW_LEN));
+  var dir = new THREE.Vector3(-Math.sin(AIM.yaw), 0, -Math.cos(AIM.yaw));
+  if (dir.lengthSq() < 1e-6) dir.set(0, 0, -1);
+  dir.normalize();
+  var sp = powerSpeed(pmVal);
+  var vh = sp * Math.cos(LAUNCH_ELEV), vy = sp * Math.sin(LAUNCH_ELEV);
+  // 瞄哪個靶就畫到那個靶的深度，弧線尾端一定落在靶上
+  var aimZ = TARGET_Z, bestD = 1e9;
+  for (var i = 0; i < targets.length; i++) {
+    var tp = targets[i].group.position;
+    var ang = Math.atan2(-(tp.x - from.x), -(tp.z - from.z));
+    var dd = Math.abs(((ang - AIM.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+    if (dd < bestD) { bestD = dd; aimZ = tp.z; }
+  }
+  var past = false;
+  for (var k = 0; k < TRAJ_N; k++) {
+    var t = 0.06 * k;
+    var y = from.y + vy * t - 4.9 * t * t;
+    var node = trajPts.children[k];
+    if (past || (k && y < 0.05)) { node.visible = false; continue; }
+    var pz = from.z + dir.z * vh * t;
+    if (pz < aimZ) past = true;   // 弧線到靶面為止，不再畫到靶後面
+    node.visible = true;
+    node.position.set(from.x + dir.x * vh * t, Math.max(y, 0.05), pz);
+  }
+}
+
+/* ============================================================
+   6. 動畫迴圈
+   ============================================================ */
+function tick() {
+  requestAnimationFrame(tick);
+  if (!renderer) return;
+  var dt = Math.min(clock.getDelta(), 0.05);
+  var tt = clock.elapsedTime;
+  if (hitStop > 0) { hitStop = Math.max(0, hitStop - dt); renderer.render(scene, camera); return; }
+
+  if (!uiReady) { uiReady = true; setupPowerMeter(); setupAimDrag(); }
+  if (state.idx !== lastIdx) { lastIdx = state.idx; resetAim(); }
+  if (pmWrap) {
+    pmWrap.style.display = state.list.length ? "" : "none";
+    pmWrap.classList.toggle("on", canShoot());
+  }
+
+  // ---- 力度計 ----
+  if (pmHold) {
+    pmT += dt;
+    var ph = (pmT / PM_PERIOD) % 1;
+    pmVal = ph < 0.5 ? ph * 2 : (1 - ph) * 2;
+    if (pmFill) pmFill.style.height = (pmVal * 100).toFixed(1) + "%";
+    if (pmMark) pmMark.style.bottom = (pmVal * 100).toFixed(1) + "%";
+    if (pmWrap) pmWrap.classList.toggle("good", pmVal > PM_GOOD_LO && pmVal < PM_GOOD_HI);
+    if (pmWrap) pmWrap.classList.toggle("perfect", pmVal > PM_PERF_LO && pmVal < PM_PERF_HI);
+    if (pmPct) pmPct.textContent = Math.round(pmVal * 100) + "%";
+    if (pmSpd) pmSpd.textContent = powerSpeed(pmVal).toFixed(1) + " m/s";
+    if (MODE !== "draw") MODE = "draw";
+  } else if (pmFill && MODE !== "draw") {
+    pmFill.style.height = "0%";
+    if (pmPct) pmPct.textContent = "0%";
+    if (pmSpd) pmSpd.textContent = "— m/s";
+  }
+
+  // ---- 狀態機 ----
+  var canAim = canShoot();
+  if (canAim && MODE !== "draw" && !flight) MODE = "ready";
+  if (!canAim && !flight && MODE === "ready") MODE = "idle";
+
+  updateTraj();
+  var wantPull;
+  if (MODE === "draw") wantPull = 0.10 + 0.88 * pmVal;
+  else if (MODE === "shoot") wantPull = 0;
+  else if (MODE === "ready") wantPull = 0.10 + Math.sin(tt * 1.6) * 0.015;
+  else wantPull = 0.04;
+
+  if (MODE === "shoot") {
+    pullNow += (0 - pullNow) * Math.min(1, dt * 26);
+    pullNow += Math.sin(tt * 60) * 0.006 * Math.max(0, followT);
+    followT = Math.max(0, followT - dt * 1.8);
+  } else {
+    pullNow += (wantPull - pullNow) * Math.min(1, dt * (MODE === "draw" ? 14 : 6));
+  }
+
+  var wantPose = (MODE === "ready" || MODE === "draw" || MODE === "shoot") ? 1 : 0;
+  poseBlend += (wantPose - poseBlend) * Math.min(1, dt * 4.5);
+  if (cheerT > 0) cheerT = Math.max(0, cheerT - dt * 0.85);
+
+  if (archer) {
+    var targetYaw = canAim ? AIM.yaw : AIM.base;
+    archer.rotation.y += (targetYaw - archer.rotation.y) * Math.min(1, dt * 7);
+    if (RIG.ready) { RIG.mixer.update(dt); poseArms(poseBlend, pullNow); }
+  }
+  updateBow();
+
+  updateAimRing();
+  updateFlight(dt);
+
+  // ---- 靶 ----
+  for (var i = 0; i < targets.length; i++) {
+    var t = targets[i];
+    t.group.position.y = t.baseY + Math.sin(tt * 1.2 + i) * 0.03;
+    // 靶升降：新題目升起、作答後未中靶躺平
+    if (t.riseDelay > 0) {
+      t.riseDelay -= dt;
+    } else if (t.rise !== t.riseT) {
+      var rs = 3.0 * dt;
+      t.rise += (t.riseT > t.rise) ? Math.min(rs, t.riseT - t.rise) : -Math.min(rs, t.rise - t.riseT);
+    }
+    var ez = t.rise < 0.5 ? 2 * t.rise * t.rise : 1 - Math.pow(-2 * t.rise + 2, 2) / 2;
+    t.hinge.rotation.x = -(1 - ez) * Math.PI / 2;
+    if (t.label) t.label.visible = ez > 0.8;
+    if (t.lsp) t.lsp.visible = ez > 0.8;
+    if (t.hit > 0) {
+      t.hit = Math.max(0, t.hit - dt * 1.5);
+      var s = 1 + Math.sin(t.hit * Math.PI) * 0.05;
+      t.group.scale.set(s, s, 1);
+    }
+  }
+
+  // ---- 相機：拉弓/放箭時切到側面特寫（背面視角看不到弓、弦、箭）----
+  if (relCam > 0) relCam = Math.max(0, relCam - dt);
+  var camWant = (MODE === "draw" || relCam > 0) ? 1 : 0;
+  camT += (camWant - camT) * Math.min(1, dt * 5);
+  if (camT < 0.002) camT = 0;
+  _rowC.set(0, 0, 0);
+  for (var ti = 0; ti < targets.length; ti++) _rowC.add(targets[ti].group.position);
+  if (targets.length) _rowC.multiplyScalar(1 / targets.length);
+  // 拉弓機位：移到持弓手側 3.4m（弓面垂直於射線，只有側面才看得到弓弧和弦）
+  BOW.grp.getWorldPosition(_sideW);
+  var _ap = archer.position;
+  // 機位跟隨瞄準方向：後方 5.2m、持弓側（左）1.55m ≈ 側偏 17°，弓臂與弦才露出身體外
+  var _cf = -Math.sin(AIM.yaw), _cz = -Math.cos(AIM.yaw);   // 前方單位向量
+  var _cr = Math.cos(AIM.yaw), _crz = -Math.sin(AIM.yaw);   // 右方單位向量
+  var _sway = CAM_SWAY ? Math.min(1, Math.max(0, (pmVal - 0.12) * 3)) : 1;   // 後備方案：只在拉弓時側移
+  var _D = 5.60, _S = 5.20 * _sway, _Y = 2.35;   // draw view: closer + bow side so the bow clears the body               // 拉弓機位：略推近，弓臂與弓弦都看得清
+  var _dx = _ap.x - _cf * _D + _cr * _S, _dy = _ap.y + _Y, _dz = _ap.z - _cz * _D + _crz * _S;
+  // 視線落在「射手與靶列之間」約三成四的位置：角色留左、四個靶留右
+  // 視線沿瞄準方向、落在靶距上：正在瞄的靶就在畫面中心，射手自然留左
+  // 視線固定落在「四個靶的中心」：構圖不隨瞄準擺動，瞄准靠拋物線小點；射手靠視差留左三分之一
+  var _lkX = _rowC.x - 0.70, _lkZ = _rowC.z, _lkY = _rowC.y + 2.35;
+  var k = camT * camT * (3 - 2 * camT);
+  // 底部基準機位也是跟隨瞄準方向的（以前是固定世界坐標，角色一轉向畫面就會歪）
+  var _D0 = 8.40, _S0 = 4.60, _Y0 = 2.95;                  // 平機位：後 8.4m、右側 4.6m（約 29°，弓臂不再被身體擋）
+  var _bx = _ap.x - _cf * _D0 + _cr * _S0, _by = _ap.y + _Y0, _bz = _ap.z - _cz * _D0 + _crz * _S0;
+  camera.position.set(_bx + (_dx - _bx) * k, _by + (_dy - _by) * k, _bz + (_dz - _bz) * k);
+  camera.lookAt(_lkX, _lkY, _lkZ);
+  var fovWant = FOV_BASE + (FOV_WIDE - FOV_BASE) * k;
+  if (Math.abs(camera.fov - fovWant) > 0.01) {
+    camera.fov = fovWant;
+    camera.updateProjectionMatrix();
+  }
+
+  // 第一人稱＝真正的射箭手視角：眼位就在角色頭骨上（參考片越肩近鏡的做法），
+  // 身體自然退到鏡頭後面，只剩向前伸的持弓手與弓留在畫面裡
+  if (VIEW_FP) {
+    // 眼位退到握弓手後方 0.85m、向右 0.45m：弓就斜在畫面左緣，不會擋住靶
+    var _fx = -Math.sin(AIM.yaw), _fz = -Math.cos(AIM.yaw);
+    var _rx = Math.cos(AIM.yaw), _rz = -Math.sin(AIM.yaw);
+    camera.position.set(_sideW.x - _fx * 0.85 + _rx * 0.45, _sideW.y + 0.22, _sideW.z - _fz * 0.85 + _rz * 0.45);
+    camera.lookAt(camera.position.x + _fx * 10, camera.position.y + 0.35, camera.position.z + _fz * 10);
+    if (camera.near !== 0.10) { camera.near = 0.10; camera.updateProjectionMatrix(); }
+    if (Math.abs(camera.fov - 62) > 0.01) { camera.fov = 62; camera.updateProjectionMatrix(); }
+  } else if (camera.near !== 0.1) { camera.near = 0.1; camera.updateProjectionMatrix(); }
+
+  // 命中推近：向中箭的靶推上去，然後退回原機位
+  if (pushT > 0) {
+    pushT = Math.max(0, pushT - dt * 1.25);
+    var pt = targets[pushIdx] ? targets[pushIdx].group.position : null;
+    if (pt) {
+      var e = pushT * pushT;
+      _camPos.set(pt.x, pt.y + 0.55, pt.z + 2.45);
+      camera.position.lerp(_camPos, e * 0.75);
+      var fovPush = 52;
+      if (camera.fov > fovPush) { camera.fov += (fovPush - camera.fov) * e * 0.85; camera.updateProjectionMatrix(); }
+      camera.lookAt(pt.x, pt.y, pt.z);
+    }
+  }
+
+  // 拉弓變焦：力度過半後畫面推向遠靶（Archery King／Wii Sports Resort 的做法）
+  var _zWant = 0;
+  if (pmHold) _zWant = Math.max(0, Math.min(1, (pmVal - 0.45) / 0.55)) * (VIEW_FP ? 0.16 : 0.26);
+  ZOOM += (_zWant - ZOOM) * Math.min(1, dt * 7);
+  if (ZOOM > 0.002) { camera.fov = camera.fov * (1 - ZOOM); camera.updateProjectionMatrix(); }
+
+  // 插在靶上的箭尾震動
+  if (stuck) {
+    stuckT += dt;
+    var amp = Math.max(0, 1 - stuckT * 2.2);
+    stuck.rotation.z = Math.sin(stuckT * 78) * 0.10 * amp;
+    if (amp <= 0) { stuck.rotation.z = 0; stuck = null; }
+  }
+  // 塵埃
+  if (dust) {
+    dustT += dt;
+    var da = dust.geometry.attributes.position.array, dv = dust.userData.v, dn = dust.userData.n;
+    for (var di = 0; di < dn; di++) {
+      da[di * 3] += dv[di * 3] * dt;
+      da[di * 3 + 1] += dv[di * 3 + 1] * dt;
+      da[di * 3 + 2] += dv[di * 3 + 2] * dt;
+      dv[di * 3 + 1] -= 3.4 * dt;
+    }
+    dust.geometry.attributes.position.needsUpdate = true;
+    dust.material.opacity = Math.max(0, 0.9 - dustT * 2.0);
+    if (dustT > 0.7) { scene.remove(dust); dust = null; }
+  }
+
+  if (!bootHidden) {
+    bootHidden = true;
+    var bt = document.getElementById("boot");
+    if (bt) { bt.classList.add("off"); setTimeout(function () { bt.style.display = "none"; }, 520); }
+  }
+
+  renderer.render(scene, camera);
+}
+
+// 鍵盤熱鍵不再直接給分：唯一作答方式是射中箭靶
+/* ============================================================
+   7. 啟動 / UI 事件
+   ============================================================ */
+function boot() {
+  initScene();
+  updateHUD();
+  tick();
+}
+
+/* ---------- 題庫來源 / 分享 / 學生入口 ---------- */
+document.getElementById("btnSheet").addEventListener("click", readSheet);
+document.getElementById("sheetId").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") readSheet();
+});
+
+function previewStart() {
+  var msg = document.getElementById("sheetMsg");
+  var id = sheetIdOf(document.getElementById("sheetId").value);
+  if (!id) { startQuiz(SAMPLE.slice()); return; }
+  setMsg(msg, "run", "⏳ 載入題目…");
+  loadBank(id).then(function (list) {
+    if (!list.length) throw new Error("EMPTY");
+    sheetBank = list;
+    startQuiz(list.slice());
+  }).catch(function (e) {
+    var c = cachedBank(id);
+    if (c && c.length) { sheetBank = c; startQuiz(c.slice()); }
+    else setMsg(msg, "err", "❌ 讀不到題目（" + errText(e) + "）");
+  });
+}
+document.getElementById("btnSample").addEventListener("click", previewStart);
+document.getElementById("btnPreview").addEventListener("click", previewStart);
+document.getElementById("btnLbSave").addEventListener("click", lbSave);
+document.getElementById("btnLbRefresh").addEventListener("click", function () {
+  document.getElementById("lbBox").hidden = true;
+  lbTop().then(function (l) { lbRender(l, { name: state.student, cls: LB.cls || "" }); });
+});
+lbLoad();
+document.getElementById("btnCopy").addEventListener("click", function () {
+  var s = document.getElementById("shareLink").textContent;
+  var b = this;
+  function done() { b.textContent = "✅ 已複製"; setTimeout(function () { b.textContent = "📋 複製連結"; }, 1400); }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(s).then(done, function () { window.prompt("複製這條連結：", s); });
+  } else { window.prompt("複製這條連結：", s); }
+});
+
+/* 學生模式：網址有 ?s= 就只顯示姓名輸入 */
+(function studentMode() {
+  var q;
+  try { q = new URLSearchParams(location.search); } catch (e) { return; }
+  var id = sheetIdOf(q.get("s") || "");
+  if (!id) return;
+  STUDENT_MODE = true;
+  var start = document.getElementById("startScreen"), stu = document.getElementById("stuScreen");
+  if (start) start.hidden = true;
+  if (stu) stu.hidden = false;
+  document.body.classList.add("student");
+  var btn = document.getElementById("btnStuStart");
+  var err = document.getElementById("stuErr");
+  var nameEl = document.getElementById("stuName");
+  if (nameEl) nameEl.addEventListener("keydown", function (ev) {   // 手機鍵盤按「完成」即可開始
+    if (ev.key === "Enter" || ev.keyCode === 13) { ev.preventDefault(); btn.click(); }
+  });
+  btn.addEventListener("click", function () {
+    var nm = (document.getElementById("stuName").value || "").trim();
+    if (!nm) {
+      err.textContent = "請先輸入姓名／學號";
+      err.hidden = false;
+      document.getElementById("stuName").focus();
+      return;
+    }
+    err.hidden = true;
+    btn.disabled = true; btn.textContent = "⏳ 載入題目…";
+    loadBank(id).then(function (list) {
+      if (!list.length) throw new Error("EMPTY");
+      sheetBank = list; startQuiz(list.slice());
+    }).catch(function (e) {
+      var c = cachedBank(id);
+      btn.disabled = false; btn.textContent = "🏹 開始";
+      if (c && c.length) { sheetBank = c; startQuiz(c.slice()); }
+      else { err.textContent = "❌ 載入失敗（" + errText(e) + "）。請叫老師檢查連結。"; err.hidden = false; }
+    });
+  });
+})();
+
+/* 老師模式：記住上次的 ID，一打開就自動讀目錄 */
+window.addEventListener("load", function () {
+  var start = document.getElementById("startScreen");
+  if (!start || start.hidden) return;
+  var inp = document.getElementById("sheetId");
+  if (!inp) return;
+  try { var saved = localStorage.getItem(SHEET_KEY); if (saved) inp.value = inp.value || saved; } catch (e) {}
+  if (sheetIdOf(inp.value)) readSheet();
+});
+
+// 繼續上次進度（iPad 中途 reload／切 App 不會丟）
+(function () {
+  var sv = loadProgress();
+  var b = document.getElementById("btnResume");
+  if (!sv || !b) return;
+  b.hidden = false;
+  b.textContent = "繼續上次（第 " + (sv.idx + 1) + "/" + sv.list.length + " 題，現時 " + sv.score + " 分）";
+  b.addEventListener("click", function () {
+    startQuiz(sv.list);
+    state.idx = sv.idx; state.score = sv.score; state.correct = sv.correct;
+    state.log = sv.log || []; state.student = sv.student || state.student;
+    showQuestion();
+    updateHUD();
+  });
+})();
+
+document.getElementById("btnExport").addEventListener("click", exportCSV);
+document.getElementById("btnSol").addEventListener("click", function () {
+  if (state.lastSol) el.sol.innerHTML = state.lastSol;
+});
+
+function exportCSV() {
+  var name = String(state.student || "未命名").replace(/[\r\n,"]/g, " ");
+  var c = document.createElement("a");
+  c.href = URL.createObjectURL(new Blob([buildCSV(name)], { type: "text/csv;charset=utf-8" }));
+  c.download = "射箭成績_" + name + "_" + new Date().toISOString().slice(0, 10) + ".csv";
+  document.body.appendChild(c); c.click();
+  setTimeout(function () { URL.revokeObjectURL(c.href); c.remove(); }, 500);
+}
+
+function buildCSV(name) {
+  var rows = [["學生", "題號", "題目", "學生選答", "正確答案", "對錯", "環數", "得分"]];
+  var pts = 0;
+  for (var i = 0; i < state.log.length; i++) {
+    var r = state.log[i];
+    pts += r.pts;
+    rows.push([name, r.n, r.q, r.pick, r.correct, r.ok ? "對" : "錯", r.ring, r.pts]);
+  }
+  rows.push([name, "合計 " + state.log.length + " 題", "", "", "", "", "", pts]);
+  var csv = rows.map(function (row) {
+    return row.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(",");
+  }).join("\r\n");
+  return "\uFEFF" + csv;
+}
+
+document.getElementById("btnPick").addEventListener("click", function () {
+  document.getElementById("fileInput").click();
+});
+
+function csvWarn(list) { // 本地 CSV 匯入：有壞行先講清楚，唔好靜靜跳過
+  if (!list.length) {
+    alert("讀唔到題目。請用 7 欄格式：題目,A,B,C,D,答案,解析" +
+      (csvStats.bad.length ? "\n\n" + csvStats.bad.slice(0, 4).map(function (x) { return "第 " + x.row + " 列：" + x.why; }).join("\n") : ""));
+    return false;
+  }
+  if (csvStats.bad.length) {
+    return confirm("有 " + csvStats.bad.length + " 列有問題，會被跳過：\n" +
+      csvStats.bad.slice(0, 5).map(function (x) { return "第 " + x.row + " 列：" + x.why; }).join("\n") +
+      "\n\n仍然開始？（可用 " + list.length + " 題）");
+  }
+  return true;
+}
+
+document.getElementById("fileInput").addEventListener("change", function (e) {
+  var f = e.target.files && e.target.files[0];
+  if (!f) return;
+  var fr = new FileReader();
+  fr.onload = function () {
+    var list = parseCSV(String(fr.result));
+    if (!csvWarn(list)) return;
+    startQuiz(list);
+  };
+  fr.readAsText(f, "utf-8");
+});
+
+document.getElementById("btnTpl").addEventListener("click", function () { // 內嵌 xlsx：老師永遠有一份正本，唔會連錯檔
+  var bin = atob(TPL_XLSX), buf = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  var blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = "題庫範本.xlsx";
+  document.body.appendChild(a); a.click();
+  setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 800);
+});
+
+document.getElementById("btnAgain").addEventListener("click", function () {
+  document.getElementById("endScreen").hidden = true;
+  startQuiz(state.list.slice());
+});
+
+document.getElementById("btnHome").addEventListener("click", function () {
+  document.getElementById("endScreen").hidden = true;
+  var stu = document.getElementById("stuScreen");
+  document.getElementById(STUDENT_MODE ? "stuScreen" : "startScreen").hidden = false;
+  state.list = []; el.panel.hidden = true; el.cross.style.display = "none";
+});
+
+document.getElementById("sound").addEventListener("click", function () {
+  soundOn = !soundOn;
+  this.textContent = soundOn ? "🔊 音效" : "🔇 靜音";
+});
+
+// 拖放 CSV
+var dz = document.getElementById("dropZone");
+["dragenter", "dragover"].forEach(function (ev) {
+  window.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.add("over"); });
+});
+["dragleave", "drop"].forEach(function (ev) {
+  window.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.remove("over"); });
+});
+window.addEventListener("drop", function (e) {
+  e.preventDefault();
+  var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (!f) return;
+  var fr = new FileReader();
+  fr.onload = function () {
+    var list = parseCSV(String(fr.result));
+    if (!csvWarn(list)) return;
+    startQuiz(list);
+  };
+  fr.readAsText(f, "utf-8");
+});
+
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+function t0(pills,rows,READ,NOTES,esc,curPage,pages,EDIT,curTag,curFolder){
+const R={style:{}},document={getElementById:()=>({style:{},textContent:'',innerHTML:''})};
+document.getElementById('rm').innerHTML='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">'+pills+'</div>'+(rows.length?rows.map(n=>'<div data-id="'+n.id+'" class="bk" style="margin:6px 0;font-size:13px;cursor:pointer">\uD83D\uDCD6 '+(READ.has(n.id)?'✓ ':'')+((n.pics&&n.pics[0])?'<img src="'+n.pics[0]+'" style="width:28px;height:28px;object-fit:cover;border-radius:4px;vertical-align:middle"> ':'')+esc(n.title)+' <span style="color:#8fa3bd;font-size:11px">'+(n.body||n.excerpt||'').length+'\u5B57</span><div style="font-size:12px;color:#c9d4e2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+esc((n.excerpt||'').slice(0,80))+'</div>'+(EDIT?' <button data-ed="'+n.id+'">\u270F\uFE0F</button><button data-del="'+n.id+'">\uD83D\uDDD1</button>':'')+'</div>').join(''):'<div style="color:#8fa3bd;font-size:13px">\u7A7A\u6AC3\u3002</div>');
+}
+export {};

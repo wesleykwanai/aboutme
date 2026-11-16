@@ -1,0 +1,14 @@
+{
+  "name": "pi-game-studio",
+  "version": "1.0.0",
+  "description": "Pi port of Claude Code Game Studios — a full AI game development studio: 49 role skills, 73 workflow skills, path rules, document templates and lifecycle hooks.",
+  "keywords": ["pi-package"],
+  "license": "MIT",
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "skills": ["./skills"],
+    "extensions": ["./extensions/game-studio.ts"]
+  }
+}
