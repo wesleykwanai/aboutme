@@ -2,3 +2,6 @@
 .pi/
 *.py
 *.txt
+
+# game source lives here for editing; only archery_hero repo publishes it
+Archer_study/
